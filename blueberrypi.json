@@ -1,10 +1,13 @@
 {
   "variables": {
+    "img_mount_path": "/mnt/blueberry"
   },
   "builders": [{
     "type": "arm-image",
     "qemu_binary": "qemu-aarch64-static",
     "image_type": "raspberrypi",
+    "target_image_size": 32212254720,
+    "output_filename": "artifacts/base.img",
     "chroot_mounts": [
       ["proc", "proc", "/proc"],
       ["sysfs", "sysfs", "/sys"],
@@ -15,6 +18,7 @@
     "additional_chroot_mounts": [
       ["bind", "/run/systemd", "/run/systemd"]
     ],
+    "mount_path": "{{ user `img_mount_path` }}",
     "iso_url": "http://cdimage.ubuntu.com/releases/18.04.4/release/ubuntu-18.04.4-preinstalled-server-arm64+raspi3.img.xz",
     "iso_checksum_type": "sha256",
     "iso_checksum": "f270d4a11fcef7f85ea77bc0642d1c6db2666ae734e9dcc4cb875a31c9f0dc57"
@@ -22,7 +26,13 @@
   "provisioners": [{
     "type": "shell",
     "inline": [
-      "apt-get update"
+      "#sudo apt-get update",
+      "#sudo apt-get -y upgrade"
+    ]
+  }, {
+    "type": "shell-local",
+    "inline": [
+      "sudo -E ANSIBLE_FORCE_COLOR=1 PYTHONUNBUFFERED=1 ansible-playbook -i '{{ user `img_mount_path` }}', -v -c chroot /vagrant/provisioning/playbook.yml"
     ]
   }]
 }

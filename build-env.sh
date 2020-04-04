@@ -4,6 +4,9 @@
 # Setup ARM emulation and packer
 #
 
+# Try and resolve hostname in advance for go-getter go plugin
+ping -c 1 proxy.golang.org
+
 # Update the system
 sudo apt-get update
 sudo apt-get -y dist-upgrade
@@ -25,7 +28,9 @@ sudo apt-get install -y \
     vim \
     unzip \
     golang-go \
-    gcc
+    gcc \
+    ansible \
+    python3-distutils
 sudo apt-get clean
 
 # Set GO paths for vagrant user

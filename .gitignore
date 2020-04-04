@@ -1,6 +1,5 @@
 .vagrant/
-output-arm-image/
+artifacts/
 packer_cache/
 packer-builder-arm-image
-output-arm-image.img
 .DS_Store
