@@ -6,10 +6,33 @@
     upgrade: yes
   environment:
     DEBIAN_FRONTEND: noninteractive
-  ignore_errors: yes
 
 - name: Clean up old packages and files to save space
   apt:
     autoclean: yes
     autoremove: yes
+
+- name: Ensure firewall is enabled with a default deny policy
+  ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+    logging: 'on'
+
+- name: Firewall - Allow SSH
+  ufw:
+    rule: allow
+    name: OpenSSH
+    log: yes
+
+# ufw supports connection rate limiting, which is useful for protecting
+# against brute-force login attacks. ufw will deny connections if an IP
+# address has attempted to initiate 6 or more connections in the last
+# 30 seconds. See  http://www.debian-administration.org/articles/187
+# for details.
+- name: Firewall - Rate limit ssh connections
+  ufw:
+    rule: limit
+    port: ssh
+    proto: tcp
 
