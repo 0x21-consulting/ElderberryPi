@@ -38,6 +38,7 @@
   service:
     name: bind9
     state: started
+    enabled: yes
 
 - name: Configure network adapter to use local dns server
   template: src=01-netcfg.yaml.j2 dest=/etc/netplan/01-netcfg.yaml
