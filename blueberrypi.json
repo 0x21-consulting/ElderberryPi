@@ -28,13 +28,13 @@
   "provisioners": [{
     "type": "shell",
     "inline": [
-      "echo Setting up SSH auth",
+      "echo Setting up SSH auth...",
       "mkdir -p {{user `image_home_dir`}}/.ssh",
       "sed '/PasswordAuthentication/d' -i /etc/ssh/ssh_config",
       "echo  >> /etc/ssh/ssh_config",
       "echo 'PasswordAuthentication no' >> /etc/ssh/ssh_config",
 
-      "echo Installing Ansible",
+      "echo Installing Ansible...",
       "sudo apt-get update",
       "sudo apt-get install software-properties-common",
       "sudo add-apt-repository --yes --update ppa:ansible/ansible",
@@ -49,6 +49,12 @@
     "type": "file",
     "source": "ansible",
     "destination": "{{user `image_home_dir`}}"
+  }, {
+    "type": "shell",
+    "inline": [
+      "echo Correcting permissions...",
+      "chown -R 1000:1000 {{user `image_home_dir`}}"
+    ]
   }]
 }
 
