@@ -7,6 +7,7 @@ Vagrant.configure("2") do |config|
   config.vm.provider "vmware_desktop" do |v|
     v.linked_clone = false
   end
+  config.vm.provision "file", source: "~/.ssh/id_ed25519.pub", destination: "$HOME/.ssh/"
   config.vm.provision "build-env", type: "shell", :path => "build-env.sh", privileged: false
   config.vm.provision "build", type: "shell", :path => "build.sh", privileged: false
 end

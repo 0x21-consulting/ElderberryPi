@@ -1,0 +1,15 @@
+---
+
+- name: Update ubuntu
+  apt:
+    update_cache: yes
+    upgrade: yes
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  ignore_errors: yes
+
+- name: Clean up old packages and files to save space
+  apt:
+    autoclean: yes
+    autoremove: yes
+

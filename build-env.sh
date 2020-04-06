@@ -29,7 +29,6 @@ sudo apt-get install -y \
     unzip \
     golang-go \
     gcc \
-    ansible \
     python3-distutils
 sudo apt-get clean
 

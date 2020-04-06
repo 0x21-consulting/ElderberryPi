@@ -1,12 +1,14 @@
 {
   "variables": {
-    "img_mount_path": "/mnt/blueberry"
+    "img_mount_path": "/mnt/blueberry",
+    "ssh_key_src": "/home/vagrant/.ssh/id_ed25519.pub",
+    "image_home_dir": "/home/ubuntu"
   },
   "builders": [{
     "type": "arm-image",
     "qemu_binary": "qemu-aarch64-static",
     "image_type": "raspberrypi",
-    "target_image_size": 32212254720,
+    "target_image_size": 8589934592,
     "output_filename": "artifacts/base.img",
     "chroot_mounts": [
       ["proc", "proc", "/proc"],
@@ -26,14 +28,27 @@
   "provisioners": [{
     "type": "shell",
     "inline": [
-      "#sudo apt-get update",
-      "#sudo apt-get -y upgrade"
-    ]
+      "echo Setting up SSH auth",
+      "mkdir -p {{user `image_home_dir`}}/.ssh",
+      "sed '/PasswordAuthentication/d' -i /etc/ssh/ssh_config",
+      "echo  >> /etc/ssh/ssh_config",
+      "echo 'PasswordAuthentication no' >> /etc/ssh/ssh_config",
+
+      "echo Installing Ansible",
+      "sudo apt-get update",
+      "sudo apt-get install software-properties-common",
+      "sudo add-apt-repository --yes --update ppa:ansible/ansible",
+      "sudo apt-get install -y ansible"
+    ],
+    "environment_vars": ["DEBIAN_FRONTEND=noninteractive"]
   }, {
-    "type": "shell-local",
-    "inline": [
-      "sudo -E ANSIBLE_FORCE_COLOR=1 PYTHONUNBUFFERED=1 ansible-playbook -i '{{ user `img_mount_path` }}', -v -c chroot /vagrant/provisioning/playbook.yml"
-    ]
+    "type": "file",
+    "source": "{{user `ssh_key_src`}}",
+    "destination": "{{user `image_home_dir`}}/.ssh/authorized_keys"
+  }, {
+    "type": "file",
+    "source": "ansible",
+    "destination": "{{user `image_home_dir`}}"
   }]
 }
 
