@@ -10,4 +10,5 @@
   roles:
   - role: common
   - role: ntp
+  - role: dns
 

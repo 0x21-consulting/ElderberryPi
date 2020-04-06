@@ -1,0 +1,19 @@
+$TTL    604800
+@       IN      SOA     {{domain}}. root.{{domain}}. (
+                             21         ; Serial
+                         604820         ; Refresh
+                          864500        ; Retry
+                        2419270         ; Expire
+                         604880 )       ; Negative Cache TTL
+
+;Your Name Server Info
+@       IN      NS      {{hostname}}.{{domain}}.
+primary IN      A       {{ip_address | ipaddr('address')}}
+
+;Reverse Lookup for Your DNS Server
+{{ip_address | regex_replace('.+\.(.+)\/.+', '\\1')}}      IN      PTR     {{hostname}}.{{domain}}.
+
+;PTR Record IP address to HostName
+;50      IN      PTR     www.{{domain}}.
+;60      IN      PTR     mail.{{domain}}.
+

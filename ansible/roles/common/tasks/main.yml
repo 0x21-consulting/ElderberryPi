@@ -27,6 +27,11 @@
     autoclean: yes
     autoremove: yes
 
+- name: Install ansible plugins
+  apt:
+    name: python-netaddr
+    state: present
+
 - name: Ensure firewall is enabled with a default deny policy
   ufw:
     state: enabled

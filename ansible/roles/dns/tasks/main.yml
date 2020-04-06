@@ -1,0 +1,47 @@
+---
+
+- name: Ensure Bind is installed
+  apt:
+    name:
+    - bind9
+    - bind9utils
+    - dnsutils
+    state: present
+
+- name: Generate Bind Options configuration
+  template: src=named.conf.options.j2 dest=/etc/bind/named.conf.options
+  notify: restart bind9
+
+- name: Generate Zones configuration
+  template: src=named.conf.local.j2 dest=/etc/bind/named.conf.local
+  when: "'active_directory' not in ansible_play_role_names"
+  notify: restart bind9
+
+- name: Generate forward lookup zone
+  template: src=forward.j2 dest=/etc/bind/forward.{{domain}}
+  when: "'active_directory' not in ansible_play_role_names"
+  notify: restart bind9
+
+- name: Generate reverse lookup zone
+  template: src=reverse.j2 dest=/etc/bind/reverse.{{domain}}
+  when: "'active_directory' not in ansible_play_role_names"
+  notify: restart bind9
+
+- name: Ensure firewall permits DNS traffic
+  ufw:
+    rule: allow
+    proto: udp
+    port: '53'
+    comment: DNS
+
+- name: Ensure Bind service is running
+  service:
+    name: bind9
+    state: started
+
+- name: Configure network adapter to use local dns server
+  template: src=01-netcfg.yaml.j2 dest=/etc/netplan/01-netcfg.yaml
+
+- name: Apply network configuration
+  command: netplan apply
+
