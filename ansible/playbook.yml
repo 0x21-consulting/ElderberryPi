@@ -4,7 +4,10 @@
   module_defaults:
     apt:
       force_apt_get: yes
+  become: yes
+  vars_files:
+    - env.yml
   roles:
   - role: common
   - role: ntp
-  become: yes
+

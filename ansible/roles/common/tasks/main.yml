@@ -1,5 +1,20 @@
 ---
 
+- name: Configure network adapter
+  template: src=01-netcfg.yaml.j2 dest=/etc/netplan/01-netcfg.yaml
+
+- name: Apply network configuration
+  command: netplan apply
+
+- name: Configure hostname
+  template: src=hostname.j2 dest=/etc/hostname
+
+- name: Run ubuntu hostname config command
+  command: hostnamectl set-hostname {{hostname}}
+
+- name: Configure fqdn
+  template: src=hosts.j2 dest=/etc/hosts
+
 - name: Update ubuntu
   apt:
     update_cache: yes
