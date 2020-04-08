@@ -12,4 +12,5 @@
   - role: ntp
   - role: dns
   - role: active_directory
+  - role: pxe
 

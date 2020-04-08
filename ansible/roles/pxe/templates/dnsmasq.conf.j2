@@ -1,0 +1,10 @@
+# Set port to 0 to disable DNS server since we use Bind
+port=0
+interface=eth0
+dhcp-range={{network | ipaddr('network')}},proxy,{{network | ipaddr('netmask')}}
+dhcp-script=/bin/echo
+pxe-service=x86PC, "PXE Boot Menu", pxelinux
+dhcp-boot=pxelinux.0
+enable-tftp
+tftp-root=/var/lib/tftpboot
+
