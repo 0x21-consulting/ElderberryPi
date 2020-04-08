@@ -197,6 +197,13 @@
     port: '139'
     comment: NetBIOS Session Service
 
+- name: Ensure firewall permits Server Message Block traffic
+  ufw:
+    rule: allow
+    proto: tcp
+    port: '445'
+    comment: SMB
+
 - name: Ensure firewall permits Lightweight Directory Access Protocol traffic
   ufw:
     rule: allow
@@ -231,6 +238,26 @@
     proto: any
     port: '135'
     comment: Microsoft EPMAP
+
+- name: Ensure firewall permits Samba RPC traffic
+  ufw:
+    rule: allow
+    proto: tcp
+    port: '49152'
+    comment: RPC 49152
+
+- name: Ensure firewall permits Samba RPC traffic
+  ufw:
+    rule: allow
+    proto: tcp
+    port: '49153'
+    comment: RPC 49153
+- name: Ensure firewall permits Samba RPC traffic
+  ufw:
+    rule: allow
+    proto: tcp
+    port: '49154'
+    comment: RPC 49154
 
 # Possible troubleshooting step:  sudo net cache flush
 #

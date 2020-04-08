@@ -8,6 +8,19 @@
     - dnsutils
     state: present
 
+- name: Disable systemd dns resolver service
+  service:
+    name: systemd-resolved
+    enabled: no
+    state: stopped
+
+- name: Write /etc/resolv.conf
+  template:
+    src: resolv.conf.j2
+    dest: /etc/resolv.conf
+    follow: no
+  notify: restart bind9
+
 - name: Generate Bind Options configuration
   template: src=named.conf.options.j2 dest=/etc/bind/named.conf.options
   notify: restart bind9
