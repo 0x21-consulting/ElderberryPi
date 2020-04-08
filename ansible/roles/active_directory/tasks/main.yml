@@ -187,6 +187,21 @@
       - "{{network | ipaddr('revdns') | regex_replace('^\\d+\\.(.+)\\.$', '\\1')}}"
   when: reverse_zone.failed
 
+- name: Add server to reverse lookup zone
+  command:
+    stdin: "{{adminpassword}}"
+    argv:
+      - samba-tool
+      - dns
+      - add
+      - "{{hostname}}"
+      - "{{network | ipaddr('revdns') | regex_replace('^\\d+\\.(.+)\\.$', '\\1')}}"
+      - "{{ip_address | ipaddr('revdns') | regex_replace('^(\\d+)\\..+\\.$', '\\1')}}"
+      - PTR
+      - "{{hostname}}.{{domain}}"
+  changed_when: false
+  ignore_errors: yes
+
 - name: Ensure firewall permits Kerberos traffic
   ufw:
     rule: allow
