@@ -57,13 +57,13 @@
     state: stopped
   when: unconfigured.changed
 
-- name: Removing existing configuration
+- name: Remove existing configuration
   file:
     path: /etc/samba/smb.conf
     state: absent
   when: unconfigured.changed
 
-- name: Provisioning Active Directory
+- name: Provision Active Directory
   command:
     argv:
       - samba-tool
@@ -124,7 +124,37 @@
     dest: /etc/krb5.conf
     group: bind
 
-#- name: Ensure NTP service is configured
+- name: Ensure NTP service can access ntp signd socket
+  file:
+    path: /var/lib/samba/ntp_signd
+    state: directory
+    group: ntp
+    mode: '750'
+  notify: restart ntp
+
+- name: Ensure NTP service is configured to use signd socket
+  lineinfile:
+    path: /etc/ntp.conf
+    line: 'ntpsigndsocket /var/lib/samba/ntp_signd/'
+    insertafter: '^driftfile'
+  notify: restart ntp
+
+- name: Ensure AppArmor allows NTP server to read signd socket
+  copy:
+    src: usr.sbin.ntpd.j2
+    dest: /etc/apparmor.d/local/usr.sbin.ntpd
+  register: apparmor_ntpd
+
+- name: Apply AppArmor NTP policy
+  command: apparmor_parser -r /etc/apparmor.d/usr.sbin.ntpd
+  when: apparmor_ntpd is changed
+
+- name: Ensure NTP does not restrict MS SNTP
+  replace:
+    path: /etc/ntp.conf
+    regexp: '^(restrict -\d.+)$'
+    replace: '\1 mssntp'
+  notify: restart ntp
 
 - name: Ensure Samba active directory service is enabled and running
   service:
@@ -132,11 +162,6 @@
     state: started
     enabled: yes
     masked: no
-
-#- name: Authenticate against Active Directory
-#  command:
-#    cmd: kinit administrator
-#    stdin: "{{adminpassword}}"
 
 - name: Check if reverse lookup zone exists
   command:
@@ -252,6 +277,7 @@
     proto: tcp
     port: '49153'
     comment: RPC 49153
+
 - name: Ensure firewall permits Samba RPC traffic
   ufw:
     rule: allow
