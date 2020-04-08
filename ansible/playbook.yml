@@ -11,4 +11,5 @@
   - role: common
   - role: ntp
   - role: dns
+  - role: active_directory
 

@@ -42,9 +42,7 @@
 
 - name: Configure network adapter to use local dns server
   template: src=01-netcfg.yaml.j2 dest=/etc/netplan/01-netcfg.yaml
-  register: network_settings
 
 - name: Apply network configuration
   command: netplan apply
-  when: network_settings is changed
 

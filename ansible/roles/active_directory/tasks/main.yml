@@ -1,0 +1,256 @@
+---
+
+- name: Ensure Samba is installed
+  apt:
+    name:
+    - acl
+    - attr
+    - apparmor-utils
+    - dnsutils
+    - samba
+    - samba-dsdb-modules
+    - samba-vfs-modules
+    - smbclient
+    - winbind
+    - libpam-winbind
+    - libnss-winbind
+    - libpam-krb5
+    - krb5-config
+    - krb5-user
+    state: present
+
+- name: Check to see whether samba is already configured
+  lineinfile:
+    name: /etc/samba/smb.conf
+    regexp: 'server role = standalone server'
+    line: ''
+    state: present
+    create: yes
+  check_mode: yes
+  register: unconfigured
+
+- name: Stop and disable samba service
+  service:
+    name: smbd
+    enabled: no
+    state: stopped
+  when: unconfigured.changed
+
+- name: Stop and disable netbios service
+  service:
+    name: nmbd
+    enabled: no
+    state: stopped
+  when: unconfigured.changed
+
+- name: Stop and disable winbind service
+  service:
+    name: winbind
+    enabled: no
+    state: stopped
+  when: unconfigured.changed
+
+- name: Stop and disable active directory service
+  service:
+    name: samba-ad-dc
+    enabled: no
+    state: stopped
+  when: unconfigured.changed
+
+- name: Removing existing configuration
+  file:
+    path: /etc/samba/smb.conf
+    state: absent
+  when: unconfigured.changed
+
+- name: Provisioning Active Directory
+  command:
+    argv:
+      - samba-tool
+      - domain
+      - provision
+      - --server-role=dc
+      - --use-rfc2307
+      - --dns-backend=BIND9_DLZ
+      - --realm={{domain}}
+      - --domain={{netbios_domain}}
+      - --adminpass={{adminpassword}}
+  when: unconfigured.changed
+
+- name: Ensure AppArmor allows DNS server to read Samba files
+  copy:
+    src: usr.sbin.named.j2
+    dest: /etc/apparmor.d/local/usr.sbin.named
+  register: apparmor
+# To disable app armor:  sudo aa-disable /etc/apparmor.d/usr.sbin.named
+# To refresh app armor:  sudo apparmor_parser -r /etc/apparmor.d/usr.sbin.named
+
+- name: Apply AppArmor DNS policy
+  command: apparmor_parser -r /etc/apparmor.d/usr.sbin.named
+  when: apparmor is changed
+
+- name: Ensure DNS dynamic updates are enabled
+  lineinfile:
+    name: /etc/bind/named.conf.options
+    line: '        tkey-gssapi-keytab "/var/lib/samba/private/dns.keytab";'
+    state: present
+    insertbefore: '^};'
+  notify: restart bind9
+
+- name: Ensure DNS server can read samba dynamic updates key tab
+  file:
+    name: /var/lib/samba/private/dns.keytab
+    group: bind
+    mode: '640'
+  notify: restart bind9
+
+- name: Ensure DNS server is configured to use Samba DNS zones
+  lineinfile:
+    name: /etc/bind/named.conf.local
+    line: 'include "/var/lib/samba/private/named.conf";'
+    state: present
+  notify: restart bind9
+
+- name: Ensure DNS server can read Samba zones
+  file:
+    name: /var/lib/samba/private/named.conf
+    group: bind
+  notify: restart bind9
+
+- name: Ensure Kerberos is configured
+  copy:
+    remote_src: yes
+    src: /var/lib/samba/private/krb5.conf
+    dest: /etc/krb5.conf
+    group: bind
+
+#- name: Ensure NTP service is configured
+
+- name: Ensure Samba active directory service is enabled and running
+  service:
+    name: samba-ad-dc
+    state: started
+    enabled: yes
+    masked: no
+
+#- name: Authenticate against Active Directory
+#  command:
+#    cmd: kinit administrator
+#    stdin: "{{adminpassword}}"
+
+- name: Check if reverse lookup zone exists
+  command:
+    stdin: "{{adminpassword}}"
+    argv:
+      - samba-tool
+      - dns
+      - zoneinfo
+      - "{{hostname}}"
+      - "{{network | ipaddr('revdns') | regex_replace('^\\d+\\.(.+)\\.$', '\\1')}}"
+  register: reverse_zone
+  changed_when: false
+  ignore_errors: yes
+
+- name: Ensure existence of reverse lookup zone
+  command:
+    stdin: "{{adminpassword}}"
+    argv:
+      - samba-tool
+      - dns
+      - zonecreate
+      - "{{hostname}}"
+      - "{{network | ipaddr('revdns') | regex_replace('^\\d+\\.(.+)\\.$', '\\1')}}"
+  when: reverse_zone.failed
+
+- name: Ensure firewall permits Kerberos traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '88'
+    comment: Kerberos
+
+- name: Ensure firewall permits Kerberos Change/Set Password traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '464'
+    comment: Kerberos Change/Set Password
+
+- name: Ensure firewall permits NetBIOS Name Service traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '137'
+    comment: NetBIOS Name Service
+
+- name: Ensure firewall permits NetBIOS Datagram Service traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '138'
+    comment: NetBIOS Datagram Service
+
+- name: Ensure firewall permits NetBIOS Session Service traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '139'
+    comment: NetBIOS Session Service
+
+- name: Ensure firewall permits Lightweight Directory Access Protocol traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '389'
+    comment: LDAP
+
+- name: Ensure firewall permits Secure LDAP traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '636'
+    comment: LDAPS
+
+- name: Ensure firewall permits Microsoft Global Catalog traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '3268'
+    comment: Microsoft Global Catalog
+
+- name: Ensure firewall permits Secure Microsoft Global Catalog traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '3269'
+    comment: Microsoft Global Catalog over SSL
+
+- name: Ensure firewall permits Microsoft End Point Mapper traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '135'
+    comment: Microsoft EPMAP
+
+# Possible troubleshooting step:  sudo net cache flush
+#
+# Might have to unmask service:  sudo systemctl unmask samba-ad-dc
+#
+# Verify services are running:  ps axf | egrep "samba|smbd|winbindd"
+# 
+# Verify DNS:
+#   _ldap SRV record:  host -t SRV _ldap._tcp.samdom.example.com.
+#   _kerberos SRV record:  host -t SRV _kerberos._udp.samdom.example.com.
+#   A record for DC:  host -t A dc1.samdom.example.com.
+# 
+# Verifying file server shares:  smbclient -L localhost -U%
+#   Should see netlogon, sysvol, and IPC$
+# 
+# To verify logon share authentication using domain admin account:
+#   smbclient //localhost/netlogon -UAdministrator -c 'ls'
+#
+# Get ports for firewall:  sudo netstat –tulpn| egrep ‘smbd|samba’
+# Show domain level:  sudo samba-tool domain level show
+# Test kerberos auth:  kinit administrator@TECMINT.LAN
+# List kerberos tickets:  klist
+#

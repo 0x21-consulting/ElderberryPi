@@ -1,30 +1,24 @@
 ---
 
-- name: Determine if DNS is running locally
-  stat:
-    path: /etc/systemd/system/multi-user.target.wants/bind9.service
-  register: local_dns
-
 - name: Configure network adapter
   template: src=01-netcfg.yaml.j2 dest=/etc/netplan/01-netcfg.yaml
-  register: network_setting
 
 - name: Apply network configuration
   command: netplan apply
-  when: network_setting is changed
 
 - name: Configure hostname
   template: src=hostname.j2 dest=/etc/hostname
-  register: hostname_setting
 
 - name: Run ubuntu hostname config command
   command: hostnamectl set-hostname {{hostname}}
-  when: hostname_setting is changed
+
+- name: Configure fqdn
+  template: src=hosts.j2 dest=/etc/hosts
 
 - name: Update ubuntu
   apt:
     update_cache: yes
-    upgrade: "yes"
+    upgrade: yes
   environment:
     DEBIAN_FRONTEND: noninteractive
 
@@ -37,11 +31,6 @@
   apt:
     name: python-netaddr
     state: present
-
-# We have to wait till now to update fqdn because ansible needs
-# the python-netaddr plugin
-- name: Configure fqdn
-  template: src=hosts.j2 dest=/etc/hosts
 
 - name: Ensure firewall is enabled with a default deny policy
   ufw:

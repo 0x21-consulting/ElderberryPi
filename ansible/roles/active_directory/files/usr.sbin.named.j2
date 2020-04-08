@@ -1,0 +1,8 @@
+# Samba DLZ and Active Directory Zones (default source installation)
+/var/lib/samba/private/dns.keytab rk,
+/var/lib/samba/private/named.conf r,
+/var/lib/samba/private/dns/** rwk,
+/etc/samba/smb.conf r,
+/usr/lib/aarch64-linux-gnu/samba/** rm,
+/usr/lib/aarch64-linux-gnu/ldb/modules/ldb/** m,
+/dev/urandom rw,

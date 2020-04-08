@@ -21,6 +21,4 @@ options {
 	recursion yes;
 	allow-recursion { "internals"; localhost; {{network}}; };
 
-{% if 'active_directory' in ansible_play_role_names %}        tkey-gssapi-keytab "/var/lib/samba/private/dns.keytab";{% endif %}
-
 };
