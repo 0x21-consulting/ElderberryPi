@@ -43,7 +43,7 @@
 - name: Ensure firewall permits DNS traffic
   ufw:
     rule: allow
-    proto: udp
+    proto: any
     port: '53'
     comment: DNS
 
