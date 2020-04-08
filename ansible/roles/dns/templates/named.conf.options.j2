@@ -1,5 +1,5 @@
 // Managing acls
-acl internals { 127.0.0.0/8; {{network}}; };
+acl internals { 127.0.0.0/8; {{network}}; fe80::/64; };
 
 options {
 	directory "/var/cache/bind";
@@ -17,9 +17,9 @@ options {
 	listen-on port 53 { {{ip_address | ipaddr('address')}}; 127.0.0.1; ::1; };
 	minimal-responses yes;
 
-	allow-query { "internals"; localhost; {{network}}; };
+	allow-query { "internals"; localhost; };
 	recursion yes;
-	allow-recursion { "internals"; localhost; {{network}}; };
+	allow-recursion { "internals"; localhost; };
 
 {% if 'active_directory' in ansible_play_role_names %}        tkey-gssapi-keytab "/var/lib/samba/private/dns.keytab";{% endif %}
 
