@@ -3,8 +3,20 @@ port=0
 interface=eth0
 dhcp-range={{network | ipaddr('network')}},proxy,{{network | ipaddr('netmask')}}
 dhcp-script=/bin/echo
-pxe-service=x86PC, "PXE Boot Menu", pxelinux
-dhcp-boot=pxelinux.0
+
+# Assign tags based on client architecture (Option 93, RFC 4578)
+dhcp-match=x86PC,  option:client-arch, 0 # BIOS x86
+dhcp-match=BC_EFI, option:client-arch, 7 # EFI x86-64
+
+# Load appropriate PXE boot image based on architecture tag
+pxe-service=tag:x86PC,x86PC, "PXE Boot Menu", pxelinux
+pxe-service=tag:BC_EFI,BC_EFI, "PXE Boot Menu", uefi/bootx64.efi
+
+# Set appropriate boot file based on architecture tag
+dhcp-boot=tag:x86PC,pxelinux.0 # Legacy BIOS
+dhcp-boot=tag:BC_EFI,uefi/bootx64.efi # UEFI
+
+# Use TFTP to transmit boot images
 enable-tftp
 tftp-root=/var/lib/tftpboot
 
