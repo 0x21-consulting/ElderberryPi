@@ -165,31 +165,33 @@
 
 - name: Check if reverse lookup zone exists
   command:
-    stdin: "{{adminpassword}}"
+    #stdin: "{{adminpassword}}"
     argv:
       - samba-tool
       - dns
       - zoneinfo
       - "{{hostname}}"
       - "{{network | ipaddr('revdns') | regex_replace('^\\d+\\.(.+)\\.$', '\\1')}}"
+      - "-P"
   register: reverse_zone
   changed_when: false
   ignore_errors: yes
 
 - name: Ensure existence of reverse lookup zone
   command:
-    stdin: "{{adminpassword}}"
+    #stdin: "{{adminpassword}}"
     argv:
       - samba-tool
       - dns
       - zonecreate
       - "{{hostname}}"
       - "{{network | ipaddr('revdns') | regex_replace('^\\d+\\.(.+)\\.$', '\\1')}}"
+      - "-P"
   when: reverse_zone.failed
 
 - name: Add server to reverse lookup zone
   command:
-    stdin: "{{adminpassword}}"
+    #stdin: "{{adminpassword}}"
     argv:
       - samba-tool
       - dns
@@ -199,6 +201,7 @@
       - "{{ip_address | ipaddr('revdns') | regex_replace('^(\\d+)\\..+\\.$', '\\1')}}"
       - PTR
       - "{{hostname}}.{{domain}}"
+      - "-P"
   changed_when: false
   ignore_errors: yes
 
