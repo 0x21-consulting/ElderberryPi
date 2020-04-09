@@ -52,12 +52,12 @@
     enabled: yes
     state: started
 
-- name: Ensure firewall permits dhcp
+- name: Ensure firewall permits Bootstrap Protocol (BOOTP)
   ufw:
     rule: allow
     proto: udp
     port: '67'
-    comment: DHCP
+    comment: BOOTP
 
 - name: Ensure firewall permits TFTP
   ufw:
@@ -65,4 +65,11 @@
     proto: udp
     port: '69'
     comment: TFTP
+
+- name: Ensure firewall permits proxyDHCP
+  ufw:
+    rule: allow
+    proto: udp
+    port: '4011'
+    comment: proxyDHCP
 
