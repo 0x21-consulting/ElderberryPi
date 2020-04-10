@@ -1,5 +1,5 @@
-BlueberryPi
-===========
+ElderberryPi
+============
 
 A small business server for the RaspberryPi.
 
@@ -22,8 +22,8 @@ notably [qemu](https://www.qemu.org), [packer](https://packer.io), and the
 [packer-builder-arm-image](https://github.com/solo-io/packer-builder-arm-image) plugin.
 
 All vagrant provisioners execute by default, so once the environment is
-provisioned the BlueberryPi ARM image will be automatically created as
-well.  If you make changes to the BlueberryPi script and wish to re-run
+provisioned the ElderberryPi ARM image will be automatically created as
+well.  If you make changes to the ElderberryPi script and wish to re-run
 the packer image creation without re-running all vagrant provisioning
 scripts, run this command:
 
@@ -49,7 +49,7 @@ $ vagrant destroy
 Vagrant and packer will try to copy `~/.ssh/id_ed25519.pub` from your host
 to the image for key-based SSH authentication.  If you want to use a
 different public key or don't want to use a key at all, make the appropriate
-changes to `Vagrantfile` and `blueberrypi.json`.  But it's better to just
+changes to `Vagrantfile` and `elderberrypi.json`.  But it's better to just
 make a key if you don't already have one:
 
 ```shell
