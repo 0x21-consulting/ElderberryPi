@@ -5,6 +5,7 @@
     name:
     - dnsmasq
     - pxelinux
+    - nginx
     state: present
 
 - name: Ensure dnsmasq is configured as a DHCP proxy server
