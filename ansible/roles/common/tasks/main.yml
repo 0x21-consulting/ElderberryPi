@@ -1,5 +1,8 @@
 ---
 
+# Start by hardening the OS to SCAP standards
+- include: harden.yml
+
 - name: Determine if DNS is running locally
   stat:
     path: /etc/systemd/system/multi-user.target.wants/bind9.service
