@@ -1,7 +1,7 @@
 {
   "variables": {
     "img_mount_path": "/mnt/blueberry",
-    "ssh_key_src": "/home/vagrant/.ssh/id_ed25519.pub",
+    "ssh_key_src": "/home/vagrant/.ssh/ssh.pub",
     "image_home_dir": "/home/ubuntu"
   },
   "builders": [{

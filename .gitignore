@@ -3,3 +3,5 @@ artifacts/
 packer_cache/
 packer-builder-arm-image
 .DS_Store
+ssh.pub
+ssh
