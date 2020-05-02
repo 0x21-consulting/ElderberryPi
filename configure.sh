@@ -174,7 +174,7 @@ if [ ! -f ./ansible/env.yml ] || [ "$RESET_CONFIG" == "true" ]; then
     echo -e "  roles:" >> ./ansible/playbook.yml
     echo -e "  - role: common" >> ./ansible/playbook.yml
     if $ROLE_NTP; then echo -e "  - role: ntp" >> ./ansible/playbook.yml; fi
-    if $ROLE_NTP; then echo -e "  - role: ntp" >> ./ansible/playbook.yml; fi
+    if $ROLE_DNS; then echo -e "  - role: dns" >> ./ansible/playbook.yml; fi
     if $ROLE_CA;  then echo -e "  - role: ca" >> ./ansible/playbook.yml; fi
     if $ROLE_AD;  then echo -e "  - role: active_directory" >> ./ansible/playbook.yml; fi
     if $ROLE_WEB; then echo -e "  - role: web" >> ./ansible/playbook.yml; fi
@@ -185,16 +185,22 @@ else
 fi
 
 # Select SSH Key
-if [ ! -f ./vagrant/ssh.pub ]; then
+if [ ! -f ./vagrant/elderberrypi.key.pub ]; then
   echo -e "\nThere is no existing SSH key configured.  Please select an existing key from your user profile or generate a new one:"
   # Pick existing key or generate a new one
   KEYS=$(ls ~/.ssh/*.pub)
   KEYS=($KEYS "Generate new key")
   select key in "${KEYS[@]}"; do
     if [ "$key" == "Generate new key" ]; then
-      ssh-keygen -f ./vagrant/ssh -t ed25519
+      ssh-keygen -f ./vagrant/elderberrypi.key -t ed25519
+      mv ./vagrant/elderberrypi.key ~/.ssh/
+      cp ./vagrant/elderberrypi.key.pub ~/.ssh/
+      echo "To connect to your ElderberryPi via ssh, run:"
+      echo "  ssh -i ~/.ssh/elderberrypi.key ubuntu@${IP_ADDRESS}"
     else
-      cp $key ./vagrant/ssh.pub
+      cp $key ./vagrant/elderberrypi.key.pub
+      echo "To connect to your ElderberryPi via ssh, run:"
+      printf "  ssh -i %s ubuntu@${IP_ADDRESS}\n" "${key//'.pub'}"
     fi
     break
   done
