@@ -52,7 +52,11 @@ if [ ! -f ./ansible/env.yml ] || [ "$RESET_CONFIG" == "true" ]; then
   echo -e "ElderberryPi Host Configuration"
   echo -e "==============================="
   while read -p "Hostname: " HOSTNAME && [ -z "$HOSTNAME" ]; do :; done
-  while read -p "Fully-Qualified Domain Name: " FQDN && [ -z "$FQDN" ]; do :; done
+  while read -p "Fully-Qualified Domain Name (do not include hostname): " FQDN && [ -z "$FQDN" ]; do :; done
+  read -p "Is there a Zymbit Hardware Security Module installed? (y/N): " ENABLE_ZYMBIT
+  if [ "$ENABLE_ZYMBIT" != "${ENABLE_ZYMBIT#[Yy]}" ]; then
+    ZYMBIT_INSTALLED=true
+  fi
 
   echo -e "\nIPv4 Network Configuration"
   echo -e "=========================="
@@ -123,6 +127,7 @@ if [ ! -f ./ansible/env.yml ] || [ "$RESET_CONFIG" == "true" ]; then
 
   echo -e "\nConfiguration Summary"
   echo -e "====================="
+  echo -e "Zymbit Installed: ${ZYMBIT_INSTALLED}"
   ROLES="Enabling roles: "
   if $ROLE_AD; then ROLES+="AD "; fi
   if $ROLE_CA; then ROLES+="CA "; fi
@@ -173,6 +178,7 @@ if [ ! -f ./ansible/env.yml ] || [ "$RESET_CONFIG" == "true" ]; then
     echo -e "    - env.yml" >> ./ansible/playbook.yml
     echo -e "  roles:" >> ./ansible/playbook.yml
     echo -e "  - role: common" >> ./ansible/playbook.yml
+    if $ZYMBIT_INSTALLED; then echo -e "  - role: zymbit" >> ./ansible/playbook.yml; fi
     if $ROLE_NTP; then echo -e "  - role: ntp" >> ./ansible/playbook.yml; fi
     if $ROLE_DNS; then echo -e "  - role: dns" >> ./ansible/playbook.yml; fi
     if $ROLE_CA;  then echo -e "  - role: ca" >> ./ansible/playbook.yml; fi

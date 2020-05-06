@@ -1,0 +1,9 @@
+---
+
+- name: restart zkifc
+  service:
+    name: zkifc
+    state: restarted
+
+- name: restart host
+  reboot:
