@@ -6,4 +6,4 @@
     state: restarted
 
 - name: restart host
-  reboot:
+  command: init 6
