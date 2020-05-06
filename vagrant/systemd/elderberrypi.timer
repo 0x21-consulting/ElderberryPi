@@ -1,0 +1,9 @@
+[Unit]
+Description=ElderberryPi timer
+
+[Timer]
+OnBootSec=10s
+OnUnitInactiveSec=30min
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,100 @@
+{
+  "variables": {
+    "ssh_key_src": "/home/vagrant/.ssh/ssh.pub",
+    "image_home_dir": "/home/ubuntu"
+  },
+  "builders": [{
+    "type": "arm",
+    "file_urls" : ["http://cdimage.ubuntu.com/releases/18.04/release/ubuntu-18.04.4-preinstalled-server-arm64+raspi4.img.xz"],
+    "file_checksum_url": "http://cdimage.ubuntu.com/releases/18.04/release/SHA256SUMS",
+    "file_checksum_type": "sha256",
+    "file_target_extension": "xz",
+    "file_unarchive_cmd": ["unxz", "$ARCHIVE_PATH"],
+    "image_build_method": "reuse",
+    "image_path": "elderberrypi.img",
+    "image_size": "2G",
+    "image_type": "dos",
+    "image_partitions": [
+      {
+        "name": "boot",
+        "type": "c",
+        "start_sector": "8192",
+        "filesystem": "vfat",
+        "size": "256M",
+        "mountpoint": "/boot"
+      },
+      {
+        "name": "root",
+        "type": "83",
+        "start_sector": "532480",
+        "filesystem": "ext4",
+        "size": "0",
+        "mountpoint": "/"
+      }
+    ],
+    "additional_chroot_mounts": [
+      {
+        "mount_type": "bind",
+        "source_path": "/run/systemd",
+        "destination_path": "/run/systemd"
+      }
+    ],
+    "image_chroot_env": [
+      "PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin",
+      "DEBIAN_FRONTEND=noninteractive"
+    ],
+    "qemu_binary_source_path": "/usr/bin/qemu-aarch64-static",
+    "qemu_binary_destination_path": "/usr/bin/qemu-aarch64-static"
+  }],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "/ansible/",
+      "destination": "/srv/elderberrypi"
+    },
+    {
+      "type": "file",
+      "source": "/vagrant/systemd/",
+      "destination": "/etc/systemd/system"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "echo Creating ElderberryPi user account and systemd service...",
+        "useradd -r -s /bin/false elderberrypi",
+        "echo 'elderberrypi ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
+        "chown -R elderberrypi: /srv/elderberrypi",
+        "chmod -R go= /srv/elderberrypi",
+        "ln -s /etc/systemd/system/elderberrypi.timer /etc/systemd/system/timers.target.wants/elderberrypi.timer",
+
+        "echo Setting up SSH auth...",
+        "mkdir -p {{user `image_home_dir`}}/.ssh",
+        "sed '/PasswordAuthentication/d' -i /etc/ssh/sshd_config",
+        "sed '/ChallengeResponseAuthentication/d' -i /etc/ssh/sshd_config",
+        "sed '/UsePAM/d' -i /etc/ssh/sshd_config",
+        "sed '/PermitRootLogin/d' -i /etc/ssh/sshd_config",
+        "echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config",
+        "echo 'ChallengeResponseAuthentication no' >> /etc/ssh/sshd_config",
+        "echo 'UsePAM no' >> /etc/ssh/sshd_config",
+        "echo 'PermitRootLogin no' >> /etc/ssh/sshd_config",
+
+        "echo Correcting permissions...",
+        "chown -R 1000:1000 {{user `image_home_dir`}}",
+
+        "echo Copy skeleton files...",
+        "cp -r /etc/skel/. {{user `image_home_dir`}}/",
+
+        "echo Installing Ansible...",
+        "sudo apt-add-repository ppa:ansible/ansible",
+        "sudo apt-get update &>/dev/null",
+        "sudo apt-get install -y ansible &>/dev/null"
+      ],
+      "environment_vars": ["DEBIAN_FRONTEND=noninteractive"]
+    },
+    {
+      "type": "file",
+      "source": "{{user `ssh_key_src`}}",
+      "destination": "{{user `image_home_dir`}}/.ssh/authorized_keys"
+    }
+  ]
+}

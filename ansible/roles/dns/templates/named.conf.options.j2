@@ -7,7 +7,7 @@ options {
 	notify no;
 	empty-zones-enable no;
 	auth-nxdomain no; # conform to RFC1035
-	forwarders { {{nameservers}}; };
+	forwarders { {{nameservers | regex_replace('[\[\]]', '') | regex_replace(',', '; ') }}; };
 	allow-transfer { none; };
 
 	dnssec-validation no;
