@@ -11,5 +11,5 @@ network:
       addresses: [{{ip_address}}]
       gateway4: {{gateway}}
       nameservers:
-        addresses: {% if local_dns.stat.exists %}[127.0.0.1]{% else %}{{nameservers}}{% endif %}
         search: [{{domain}}]
+        addresses: {% if local_dns.stat.exists %}[127.0.0.1]{% else %}{{nameservers}}{% endif %}
