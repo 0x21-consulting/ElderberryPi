@@ -35,7 +35,9 @@
 
 - name: Install ansible plugins
   apt:
-    name: python-netaddr
+    name:
+      - python-netaddr
+      - python-jmespath
     state: present
 
 # We have to wait till now to update fqdn because ansible needs
