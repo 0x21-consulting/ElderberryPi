@@ -119,3 +119,13 @@
     url: https://s3.amazonaws.com/zk-sw-repo/zk_prep_encr
     dest: /usr/local/bin/zk_prep_encr
     mode: +x
+
+- name: Copy encryption and decryption cli tools
+  copy:
+    src: "{{ item }}"
+    dest: /usr/local/bin/
+    mode: "+x"
+  with_items:
+    - zkencrypt
+    - zkdecrypt
+

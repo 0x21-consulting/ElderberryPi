@@ -1,0 +1,28 @@
+#!/usr/bin/python3
+
+import sys
+import zymkey
+import argparse
+
+# Process arguments
+parser = argparse.ArgumentParser(
+    description='Decrypts data using the Zymkey Python API. If --input unspecified, reads stdin. \
+    If --output unspecified, writes to stdout.'
+)
+parser.add_argument('-i', '--input', help="path to input file")
+parser.add_argument('-o', '--output', help="path to output file")
+args = parser.parse_args()
+
+if args.input is None:
+    # TODO: This currently does not work
+    ciphertext = sys.stdin.buffer.read()
+else:
+    ciphertext = args.input
+
+# Decrypt
+if args.output is None:
+    plaintext = zymkey.client.unlock(ciphertext)
+    sys.stdout.buffer.write(plaintext)
+else:
+    zymkey.client.unlock(ciphertext, args.output)
+
