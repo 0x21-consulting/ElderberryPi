@@ -172,6 +172,7 @@
 
 - set_fact:
     vault_cert: "{{ vault_int_cert.stdout | from_json }}"
+  when: output['pki_int/'] is not defined
 
 - name: Import signed certificate into Intermediate CA
   shell: VAULT_ADDR=http://127.0.0.1:8200 vault write pki_int/intermediate/set-signed certificate="{{vault_cert.data.certificate}}"
@@ -185,4 +186,14 @@
   file:
     path: ~/.vault-token
     state: absent
+
+- name: Ensure Root CA certificate is trusted system-wide
+  copy:
+    src: /etc/vault/CA_cert.crt
+    dest: /usr/local/share/ca-certificates/CA_cert.crt
+  register: trust_store
+
+- name: Refresh CA trust store
+  command: update-ca-certificates --fresh
+  when: trust_store.changed
 
