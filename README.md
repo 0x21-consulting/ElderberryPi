@@ -36,9 +36,13 @@ Presently, the following roles are supported (but more are coming soon!):
 * Active Directory Domain Controller (administer with Windows AD tools)
 * PXE Server (work-in-progress)
 * DHCP (only for BOOTP/PXE support presently)
-* Certificate Authority (coming soon)
+* Certificate Authority (via Hashicorp Vault)
+  * With auto-deployment of AD Group Policy for CA Root trust
 * Web Server (coming soon)
-* Zymbit (for Real Time Clock support; root filesystem encryption coming soon)
+* Zymbit Zymkey Hardware Security Module
+  * Real Time Clock support with NTP sync
+  * Vault auto-unseal
+  * Root filesystem encryption coming soon
 
 ## Getting Started
 
@@ -51,7 +55,7 @@ It's also highly recommended that you obtain the Zymbit Zymkey 4i security modul
 you would like these features:
 * Real Time Clock (essential for NTP and AD; you could use other hardware too)
 * Root filesystem encryption at-rest
-* Secure storage of CA root private key
+* Secure storage of CA Vault auto-unseal key
 * Optional physical perimeter security
 
 ### Software Prerequisites
@@ -67,7 +71,7 @@ for building ElderberryPi.
 ### Configuring
 
 ```shell
-$ ./configure.sh
+$ ./build.sh
 ```
 
 Answer all the questions and select the roles you wish to enable.  That's it.  :)
@@ -75,7 +79,7 @@ Answer all the questions and select the roles you wish to enable.  That's it.  :
 If you need to reconfigure later, just pass the option:
 
 ```shell
-$ ./configure.sh --reset-config
+$ ./build.sh --reset-config
 ```
 
 ### Build Steps
@@ -128,7 +132,24 @@ $ sudo systemctl start elderberrypi &
 ```
 
 If systemctl sees that the service is already running, it won't try to start it again.
-The 30 minute timer starts at the completion of the script.
+The 30 minute timer starts at the completion of the previous script run.
+
+### Re-Configuring a Live System
+
+It's probably easiest to just build a new image with the updated configuration.  However,
+if you can't you can modify configuration by editing the env.yml file on the host:
+
+```shell
+$ sudo vim /srv/elderberrypi/env.yml
+```
+
+To add or remove roles, modify the ansible playbook file.  Note that roles have dependencies
+so if you remove a role that is depended upon by anothe role it will remain installed
+anyway.
+
+```shell
+$ sudo vim /srv/elderberrypi/playbook.yml
+```
 
 ### Cleaning up
 
