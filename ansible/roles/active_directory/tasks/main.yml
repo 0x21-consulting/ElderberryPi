@@ -156,6 +156,15 @@
     replace: '\1 mssntp'
   notify: restart ntp
 
+- name: Restart Bind9 and NTP before enabling AD service if domain was just configured
+  service:
+    name: "{{ item }}"
+    state: restarted
+  with_items:
+    - bind9
+    - ntp
+  when: unconfigured.changed
+
 - name: Ensure Samba active directory service is enabled and running
   service:
     name: samba-ad-dc
