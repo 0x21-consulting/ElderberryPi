@@ -205,6 +205,45 @@
   changed_when: false
   ignore_errors: yes
 
+- name: Determine whether CA Root Trust Group Policy exists
+  command: samba-tool gpo listall
+  changed_when: false
+  register: ca_trust_gpo
+
+- set_fact:
+    ca_trust_gpo_exists: '{{ "Certificate Authority Trust" in ca_trust_gpo.stdout }}'
+    ca_trust_gpo_id: "{{ ca_trust_gpo.stdout | regex_search('GPO\\s+:\\s+({.+})\\s*\\ndisplay name : Certificate Authority Trust', multiline=True) | regex_replace('.+({.+})\\n.*', '\\1') }}"
+    ca_trust_dn: "DC={{domain | regex_replace('\\.', ',DC=')}}"
+
+- name: Create GPO for CA Root Trust
+  shell:
+    cmd: "samba-tool gpo create 'Certificate Authority Trust' -U administrator --password {{adminpassword}}"
+    stdin: "{{adminpassword}}" # TODO: https://github.com/ansible/ansible/issues/69442
+  when: not ca_trust_gpo_exists
+  register: ca_trust_gpo_create
+
+- set_fact:
+    ca_trust_gpo_id: "{{ ca_trust_gpo_create.stdout | regex_replace('.+({.+})', '\\1') }}"
+  when: not ca_trust_gpo_exists
+
+- name: Ensure CA Root Trust Group Policy exists
+  shell: "(cat roles/active_directory/files/ca_trust_gpo_1 ; openssl x509 -outform DER -in /etc/vault/CA_cert.crt | openssl sha1 | awk '{ print toupper($0) }' | sed -z -e 's/(STDIN)= //' -e 's/\\x0a//' -e 's/./&\\x00/g' ; cat roles/active_directory/files/ca_trust_gpo_2 ; openssl x509 -outform DER -in /etc/vault/CA_cert.crt ; cat roles/active_directory/files/ca_trust_gpo_3) > /var/lib/samba/sysvol/{{domain}}/Policies/{{ca_trust_gpo_id}}/Machine/Registry.pol"
+  when: not ca_trust_gpo_exists
+
+- name: Determine whether CA Root Trust GPO is linked to domain
+  command: "samba-tool gpo listcontainers {{ca_trust_gpo_id}}"
+  changed_when: false
+  register: ca_trust_gpo_linked
+
+- set_fact:
+    ca_trust_gpo_link_exists: "{{ ca_trust_gpo_linked.stdout | regex_search(ca_trust_dn) }}"
+
+- name: Link CA Root Trust GPO to domain
+  command:
+    cmd: "samba-tool gpo setlink {{ca_trust_dn}} {{ca_trust_gpo_id}} -U administrator --password {{adminpassword}}"
+    stdin: '{{adminpassword}}' # TODO: https://github.com/ansible/ansible/issues/69442
+  when: not ca_trust_gpo_link_exists
+
 - name: Ensure firewall permits Kerberos traffic
   ufw:
     rule: allow
