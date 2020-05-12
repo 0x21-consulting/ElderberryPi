@@ -112,7 +112,11 @@
     src: /usr/local/lib/python3.6/dist-packages/zk_crypt_vol_utils/__init__.py
     dest: /usr/local/bin/create_zk_crypt_vol
   # If this symlink doesn't exist, this is first run. Restart to bind device to Pi
-  notify: restart host
+  register: zymbit_first_run
+
+- name: Reboot host to bind Zymkey
+  shell: init 6
+  when: zymbit_first_run.changed
 
 - name: Ensure zk_prep_encr script exists
   get_url:
