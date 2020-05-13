@@ -33,9 +33,12 @@
     autoclean: yes
     autoremove: yes
 
-- name: Install ansible plugins
+- name: Install ansible plugins and other dependencies
   apt:
-    name: python-netaddr
+    name:
+      - python-netaddr
+      - python-jmespath
+      - unzip
     state: present
 
 # We have to wait till now to update fqdn because ansible needs

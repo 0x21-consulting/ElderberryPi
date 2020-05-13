@@ -7,3 +7,4 @@
 
 - name: restart host
   command: init 6
+
