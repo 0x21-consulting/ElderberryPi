@@ -20,6 +20,9 @@
 - name: Configure DNS
   import_tasks: dns.yml
 
+- name: Configure NTP
+  import_tasks: ntp.yml
+
 - name: Ensure Kerberos is configured
   copy:
     remote_src: yes
