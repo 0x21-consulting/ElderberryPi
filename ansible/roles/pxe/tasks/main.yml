@@ -72,4 +72,3 @@
     proto: udp
     port: '4011'
     comment: proxyDHCP
-

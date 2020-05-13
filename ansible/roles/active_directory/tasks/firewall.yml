@@ -1,0 +1,99 @@
+---
+
+- name: Ensure firewall permits Kerberos traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '88'
+    comment: Kerberos
+
+- name: Ensure firewall permits Kerberos Change/Set Password traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '464'
+    comment: Kerberos Change/Set Password
+
+- name: Ensure firewall permits NetBIOS Name Service traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '137'
+    comment: NetBIOS Name Service
+
+- name: Ensure firewall permits NetBIOS Datagram Service traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '138'
+    comment: NetBIOS Datagram Service
+
+- name: Ensure firewall permits NetBIOS Session Service traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '139'
+    comment: NetBIOS Session Service
+
+- name: Ensure firewall permits Server Message Block traffic
+  ufw:
+    rule: allow
+    proto: tcp
+    port: '445'
+    comment: SMB
+
+- name: Ensure firewall permits Lightweight Directory Access Protocol traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '389'
+    comment: LDAP
+
+- name: Ensure firewall permits Secure LDAP traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '636'
+    comment: LDAPS
+
+- name: Ensure firewall permits Microsoft Global Catalog traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '3268'
+    comment: Microsoft Global Catalog
+
+- name: Ensure firewall permits Secure Microsoft Global Catalog traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '3269'
+    comment: Microsoft Global Catalog over SSL
+
+- name: Ensure firewall permits Microsoft End Point Mapper traffic
+  ufw:
+    rule: allow
+    proto: any
+    port: '135'
+    comment: Microsoft EPMAP
+
+- name: Ensure firewall permits Samba RPC traffic
+  ufw:
+    rule: allow
+    proto: tcp
+    port: '49152'
+    comment: RPC 49152
+
+- name: Ensure firewall permits Samba RPC traffic
+  ufw:
+    rule: allow
+    proto: tcp
+    port: '49153'
+    comment: RPC 49153
+
+- name: Ensure firewall permits Samba RPC traffic
+  ufw:
+    rule: allow
+    proto: tcp
+    port: '49154'
+    comment: RPC 49154

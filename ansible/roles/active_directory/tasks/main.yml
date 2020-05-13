@@ -1,23 +1,7 @@
 ---
 
-- name: Ensure Samba is installed
-  apt:
-    name:
-    - acl
-    - attr
-    - apparmor-utils
-    - dnsutils
-    - samba
-    - samba-dsdb-modules
-    - samba-vfs-modules
-    - smbclient
-    - winbind
-    - libpam-winbind
-    - libnss-winbind
-    - libpam-krb5
-    - krb5-config
-    - krb5-user
-    state: present
+- name: Install Samba
+  import_tasks: install.yml
 
 - name: Check to see whether samba is already configured
   lineinfile:
@@ -29,93 +13,12 @@
   check_mode: yes
   register: unconfigured
 
-- name: Stop and disable samba service
-  service:
-    name: smbd
-    enabled: no
-    state: stopped
-  when: unconfigured.changed
-
-- name: Stop and disable netbios service
-  service:
-    name: nmbd
-    enabled: no
-    state: stopped
-  when: unconfigured.changed
-
-- name: Stop and disable winbind service
-  service:
-    name: winbind
-    enabled: no
-    state: stopped
-  when: unconfigured.changed
-
-- name: Stop and disable active directory service
-  service:
-    name: samba-ad-dc
-    enabled: no
-    state: stopped
-  when: unconfigured.changed
-
-- name: Remove existing configuration
-  file:
-    path: /etc/samba/smb.conf
-    state: absent
-  when: unconfigured.changed
-
 - name: Provision Active Directory
-  command:
-    argv:
-      - samba-tool
-      - domain
-      - provision
-      - --server-role=dc
-      - --use-rfc2307
-      - --dns-backend=BIND9_DLZ
-      - --realm={{domain}}
-      - --domain={{netbios_domain}}
-      - --adminpass={{adminpassword}}
+  import_tasks: provision.yml
   when: unconfigured.changed
 
-- name: Ensure AppArmor allows DNS server to read Samba files
-  copy:
-    src: usr.sbin.named.j2
-    dest: /etc/apparmor.d/local/usr.sbin.named
-  register: apparmor
-# To disable app armor:  sudo aa-disable /etc/apparmor.d/usr.sbin.named
-# To refresh app armor:  sudo apparmor_parser -r /etc/apparmor.d/usr.sbin.named
-
-- name: Apply AppArmor DNS policy
-  command: apparmor_parser -r /etc/apparmor.d/usr.sbin.named
-  when: apparmor is changed
-
-- name: Ensure DNS dynamic updates are enabled
-  lineinfile:
-    name: /etc/bind/named.conf.options
-    line: '        tkey-gssapi-keytab "/var/lib/samba/private/dns.keytab";'
-    state: present
-    insertbefore: '^};'
-  notify: restart bind9
-
-- name: Ensure DNS server can read samba dynamic updates key tab
-  file:
-    name: /var/lib/samba/private/dns.keytab
-    group: bind
-    mode: '640'
-  notify: restart bind9
-
-- name: Ensure DNS server is configured to use Samba DNS zones
-  lineinfile:
-    name: /etc/bind/named.conf.local
-    line: 'include "/var/lib/samba/private/named.conf";'
-    state: present
-  notify: restart bind9
-
-- name: Ensure DNS server can read Samba zones
-  file:
-    name: /var/lib/samba/private/named.conf
-    group: bind
-  notify: restart bind9
+- name: Configure DNS
+  import_tasks: dns.yml
 
 - name: Ensure Kerberos is configured
   copy:
@@ -123,38 +26,6 @@
     src: /var/lib/samba/private/krb5.conf
     dest: /etc/krb5.conf
     group: bind
-
-- name: Ensure NTP service can access ntp signd socket
-  file:
-    path: /var/lib/samba/ntp_signd
-    state: directory
-    group: ntp
-    mode: '750'
-  notify: restart ntp
-
-- name: Ensure NTP service is configured to use signd socket
-  lineinfile:
-    path: /etc/ntp.conf
-    line: 'ntpsigndsocket /var/lib/samba/ntp_signd/'
-    insertafter: '^driftfile'
-  notify: restart ntp
-
-- name: Ensure AppArmor allows NTP server to read signd socket
-  copy:
-    src: usr.sbin.ntpd.j2
-    dest: /etc/apparmor.d/local/usr.sbin.ntpd
-  register: apparmor_ntpd
-
-- name: Apply AppArmor NTP policy
-  command: apparmor_parser -r /etc/apparmor.d/usr.sbin.ntpd
-  when: apparmor_ntpd is changed
-
-- name: Ensure NTP does not restrict MS SNTP
-  replace:
-    path: /etc/ntp.conf
-    regexp: '^(restrict -\d.+)$'
-    replace: '\1 mssntp'
-  notify: restart ntp
 
 - name: Restart Bind9 and NTP before enabling AD service if domain was just configured
   service:
@@ -165,6 +36,9 @@
     - ntp
   when: unconfigured.changed
 
+- name: Ensure Firewall Permits SMB, LDAP, and Kerberos Traffic
+  import_tasks: firewall.yml
+
 - name: Ensure Samba active directory service is enabled and running
   service:
     name: samba-ad-dc
@@ -172,184 +46,12 @@
     enabled: yes
     masked: no
 
-- name: Check if reverse lookup zone exists
-  command:
-    #stdin: "{{adminpassword}}"
-    argv:
-      - samba-tool
-      - dns
-      - zoneinfo
-      - "{{hostname}}"
-      - "{{network | ipaddr('revdns') | regex_replace('^\\d+\\.(.+)\\.$', '\\1')}}"
-      - "-P"
-  register: reverse_zone
-  changed_when: false
-  ignore_errors: yes
+- name: Ensure DNS Reverse Lookup
+  import_tasks: reverse_lookup.yml
 
-- name: Ensure existence of reverse lookup zone
-  command:
-    #stdin: "{{adminpassword}}"
-    argv:
-      - samba-tool
-      - dns
-      - zonecreate
-      - "{{hostname}}"
-      - "{{network | ipaddr('revdns') | regex_replace('^\\d+\\.(.+)\\.$', '\\1')}}"
-      - "-P"
-  when: reverse_zone.failed
-
-- name: Add server to reverse lookup zone
-  command:
-    #stdin: "{{adminpassword}}"
-    argv:
-      - samba-tool
-      - dns
-      - add
-      - "{{hostname}}"
-      - "{{network | ipaddr('revdns') | regex_replace('^\\d+\\.(.+)\\.$', '\\1')}}"
-      - "{{ip_address | ipaddr('revdns') | regex_replace('^(\\d+)\\..+\\.$', '\\1')}}"
-      - PTR
-      - "{{hostname}}.{{domain}}"
-      - "-P"
-  changed_when: false
-  ignore_errors: yes
-
-- name: Determine whether CA Root Trust Group Policy exists
-  command: samba-tool gpo listall
-  changed_when: false
-  register: ca_trust_gpo
-
-- set_fact:
-    ca_trust_gpo_exists: '{{ "Certificate Authority Trust" in ca_trust_gpo.stdout }}'
-    ca_trust_gpo_id: "{{ ca_trust_gpo.stdout | regex_search('GPO\\s+:\\s+({.+})\\s*\\ndisplay name : Certificate Authority Trust', multiline=True) | regex_replace('.+({.+})\\n.*', '\\1') }}"
-    ca_trust_dn: "DC={{domain | regex_replace('\\.', ',DC=')}}"
-
-- name: Create GPO for CA Root Trust
-  shell:
-    cmd: "samba-tool gpo create 'Certificate Authority Trust' -U administrator --password {{adminpassword}}"
-    stdin: "{{adminpassword}}" # TODO: https://github.com/ansible/ansible/issues/69442
-  when: not ca_trust_gpo_exists
-  register: ca_trust_gpo_create
-
-- set_fact:
-    ca_trust_gpo_id: "{{ ca_trust_gpo_create.stdout | regex_replace('.+({.+})', '\\1') }}"
-  when: not ca_trust_gpo_exists
-
-- name: Ensure CA Root Trust Group Policy exists
-  shell: "(cat roles/active_directory/files/ca_trust_gpo_1 ; openssl x509 -outform DER -in /etc/vault/CA_cert.crt | openssl sha1 | awk '{ print toupper($0) }' | sed -z -e 's/(STDIN)= //' -e 's/\\x0a//' -e 's/./&\\x00/g' ; cat roles/active_directory/files/ca_trust_gpo_2 ; openssl x509 -outform DER -in /etc/vault/CA_cert.crt ; cat roles/active_directory/files/ca_trust_gpo_3) > /var/lib/samba/sysvol/{{domain}}/Policies/{{ca_trust_gpo_id}}/Machine/Registry.pol"
-  when: not ca_trust_gpo_exists
-
-- name: Determine whether CA Root Trust GPO is linked to domain
-  command: "samba-tool gpo listcontainers {{ca_trust_gpo_id}}"
-  changed_when: false
-  register: ca_trust_gpo_linked
-
-- set_fact:
-    ca_trust_gpo_link_exists: "{{ ca_trust_gpo_linked.stdout | regex_search(ca_trust_dn) }}"
-
-- name: Link CA Root Trust GPO to domain
-  command:
-    cmd: "samba-tool gpo setlink {{ca_trust_dn}} {{ca_trust_gpo_id}} -U administrator --password {{adminpassword}}"
-    stdin: '{{adminpassword}}' # TODO: https://github.com/ansible/ansible/issues/69442
-  when: not ca_trust_gpo_link_exists
-
-- name: Ensure firewall permits Kerberos traffic
-  ufw:
-    rule: allow
-    proto: any
-    port: '88'
-    comment: Kerberos
-
-- name: Ensure firewall permits Kerberos Change/Set Password traffic
-  ufw:
-    rule: allow
-    proto: any
-    port: '464'
-    comment: Kerberos Change/Set Password
-
-- name: Ensure firewall permits NetBIOS Name Service traffic
-  ufw:
-    rule: allow
-    proto: any
-    port: '137'
-    comment: NetBIOS Name Service
-
-- name: Ensure firewall permits NetBIOS Datagram Service traffic
-  ufw:
-    rule: allow
-    proto: any
-    port: '138'
-    comment: NetBIOS Datagram Service
-
-- name: Ensure firewall permits NetBIOS Session Service traffic
-  ufw:
-    rule: allow
-    proto: any
-    port: '139'
-    comment: NetBIOS Session Service
-
-- name: Ensure firewall permits Server Message Block traffic
-  ufw:
-    rule: allow
-    proto: tcp
-    port: '445'
-    comment: SMB
-
-- name: Ensure firewall permits Lightweight Directory Access Protocol traffic
-  ufw:
-    rule: allow
-    proto: any
-    port: '389'
-    comment: LDAP
-
-- name: Ensure firewall permits Secure LDAP traffic
-  ufw:
-    rule: allow
-    proto: any
-    port: '636'
-    comment: LDAPS
-
-- name: Ensure firewall permits Microsoft Global Catalog traffic
-  ufw:
-    rule: allow
-    proto: any
-    port: '3268'
-    comment: Microsoft Global Catalog
-
-- name: Ensure firewall permits Secure Microsoft Global Catalog traffic
-  ufw:
-    rule: allow
-    proto: any
-    port: '3269'
-    comment: Microsoft Global Catalog over SSL
-
-- name: Ensure firewall permits Microsoft End Point Mapper traffic
-  ufw:
-    rule: allow
-    proto: any
-    port: '135'
-    comment: Microsoft EPMAP
-
-- name: Ensure firewall permits Samba RPC traffic
-  ufw:
-    rule: allow
-    proto: tcp
-    port: '49152'
-    comment: RPC 49152
-
-- name: Ensure firewall permits Samba RPC traffic
-  ufw:
-    rule: allow
-    proto: tcp
-    port: '49153'
-    comment: RPC 49153
-
-- name: Ensure firewall permits Samba RPC traffic
-  ufw:
-    rule: allow
-    proto: tcp
-    port: '49154'
-    comment: RPC 49154
+- name: Ensure CA Root Trust by Windows Domain Members
+  import_tasks: ca_root_trust.yml
+  when: "'ca' in ansible_play_role_names"
 
 # Possible troubleshooting step:  sudo net cache flush
 #
@@ -369,7 +71,8 @@
 #   smbclient //localhost/netlogon -UAdministrator -c 'ls'
 #
 # Get ports for firewall:  sudo netstat –tulpn| egrep ‘smbd|samba’
+#
 # Show domain level:  sudo samba-tool domain level show
+#
 # Test kerberos auth:  kinit administrator@TECMINT.LAN
 # List kerberos tickets:  klist
-#

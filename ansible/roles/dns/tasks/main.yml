@@ -60,4 +60,3 @@
 - name: Apply network configuration
   command: netplan apply
   when: network_settings is changed
-

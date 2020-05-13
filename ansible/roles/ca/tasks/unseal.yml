@@ -1,0 +1,10 @@
+---
+
+- name: Decrypt vault unseal key
+  command:
+    cmd: zkdecrypt -i /etc/vault/unseal.key
+  register: vault_unseal_key
+  changed_when: false
+
+- name: Unseal vault
+  shell: VAULT_ADDR=http://127.0.0.1:8200 vault operator unseal -format=json {{ vault_unseal_key.stdout }}

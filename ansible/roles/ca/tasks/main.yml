@@ -6,41 +6,8 @@
   register: vault
   changed_when: false
 
-- name: Ensure Hashicorp Public Key is imported into GPG keybox
-  command: gpg --keyserver keys.openpgp.org --recv-keys 51852D87348FFC4C
-  when: not vault.stat.exists
-
-- name: Download vault checksum signature
-  get_url:
-    url: https://releases.hashicorp.com/vault/{{VAULT_VERSION}}/vault_{{VAULT_VERSION}}_SHA256SUMS.sig
-    dest: ./vault_{{VAULT_VERSION}}_SHA256SUMS.sig
-  when: not vault.stat.exists
-
-- name: Download vault checksum
-  get_url:
-    url: https://releases.hashicorp.com/vault/{{VAULT_VERSION}}/vault_{{VAULT_VERSION}}_SHA256SUMS
-    dest: ./vault_{{VAULT_VERSION}}_SHA256SUMS
-  when: not vault.stat.exists
-
-- name: Verify checksum file digital signature
-  command: gpg --verify vault_{{VAULT_VERSION}}_SHA256SUMS.sig vault_{{VAULT_VERSION}}_SHA256SUMS
-  when: not vault.stat.exists
-
-- name: Download vault
-  get_url:
-    url: https://releases.hashicorp.com/vault/{{VAULT_VERSION}}/vault_{{VAULT_VERSION}}_linux_arm64.zip
-    dest: ./vault_{{VAULT_VERSION}}_linux_arm64.zip
-    # TODO: Find some way to use the downloaded, verified SHASUMS file...
-    #checksum: sha256:{{lookup('file', './vault_1.4.1_SHA256SUMS')}}
-    checksum: sha256:https://releases.hashicorp.com/vault/{{VAULT_VERSION}}/vault_{{VAULT_VERSION}}_SHA256SUMS
-  when: not vault.stat.exists
-
 - name: Install vault
-  unarchive:
-    src: ./vault_{{VAULT_VERSION}}_linux_arm64.zip
-    dest: /usr/bin
-    remote_src: yes
-    mode: u+x,g+x,o+x
+  import_tasks: install.yml
   when: not vault.stat.exists
 
 - name: Ensure systemd service is installed
@@ -84,116 +51,12 @@
     vault_unsealed: "{{ vault_status.rc == 0 }}"
 
 - name: Initialize vault
-  shell: VAULT_ADDR=http://127.0.0.1:8200 vault operator init -key-shares=1 -key-threshold=1 -format=json
-  register: vault_init_results
+  import_tasks: initialize.yml
   when: not vault_initialized
 
-- set_fact:
-    output: "{{ vault_init_results.stdout | from_json }}"
-  when: not vault_initialized
-
-- name: Encrypt and store unseal key
-  command:
-    cmd: zkencrypt -o /etc/vault/unseal.key
-    stdin: "{{ output.unseal_keys_b64 | first }}"
-    creates: /etc/vault/unseal.key
-  when: not vault_initialized
-
-- name: Encrypt and store root token
-  command:
-    cmd: zkencrypt -o /etc/vault/root.token
-    stdin: "{{ output.root_token }}"
-    creates: /etc/vault/root.token
-  when: not vault_initialized
-
-- name: Decrypt vault unseal key
-  command:
-    cmd: zkdecrypt -i /etc/vault/unseal.key
-  register: vault_unseal_key
-  when: not vault_unsealed
-  changed_when: false
-
-- name: Unseal vault
-  shell: VAULT_ADDR=http://127.0.0.1:8200 vault operator unseal -format=json {{ vault_unseal_key.stdout }}
+- name: Unsealed vault
+  import_tasks: unseal.yml
   when: not vault_unsealed
 
-- name: Authenticate with vault
-  command:
-    cmd: zkdecrypt -i /etc/vault/root.token -o ~/.vault-token
-    creates: ~/.vault-token
-
-- name: Determine whether a Root CA exists
-  shell: VAULT_ADDR=http://127.0.0.1:8200 vault secrets list -format=json
-  register: vault_secrets_list
-  changed_when: false
-
-- set_fact:
-    output: "{{ vault_secrets_list.stdout | from_json }}"
-
-- name: Enable pki secrets engine at pki endpoint for Root CA
-  shell: VAULT_ADDR=http://127.0.0.1:8200 vault secrets enable -description="Root CA" pki
-  when: output['pki/'] is not defined
-
-- name: Set certificate maximum TTL to 10 years for Root CA
-  shell: VAULT_ADDR=http://127.0.0.1:8200 vault secrets tune -max-lease-ttl=87600h pki
-  when: output['pki/'] is not defined
-
-- name: Generate root certificate
-  shell: 
-    cmd: VAULT_ADDR=http://127.0.0.1:8200 vault write -field=certificate pki/root/generate/internal common_name="{{domain}}" ttl=87600h > /etc/vault/CA_cert.crt
-    creates: /etc/vault/CA_cert.crt
-  when: output['pki/'] is not defined
-
-- name: Configure CA and Certificate Revocation List URLs
-  shell: VAULT_ADDR=http://127.0.0.1:8200 vault write pki/config/urls issuing_certificates="http://127.0.0.1:8200/v1/pki/ca" crl_distribution_points="http://127.0.0.1:8200/v1/pki/crl"
-  when: output['pki/'] is not defined
-
-- name: Enable pki secrets engine at pki_int endpoint for Intermediate CA
-  shell: VAULT_ADDR=http://127.0.0.1:8200 vault secrets enable -path=pki_int -description="Intermediate CA" pki
-  when: output['pki_int/'] is not defined
-
-- name: Set certificate maximum TTL to 5 years for Intermediate CA
-  shell: VAULT_ADDR=http://127.0.0.1:8200 vault secrets tune -max-lease-ttl=43800h pki_int
-  when: output['pki_int/'] is not defined
-
-- name: Generate Intermediate CA and Certificate Signing Request
-  shell: VAULT_ADDR=http://127.0.0.1:8200 vault write -format=json pki_int/intermediate/generate/internal common_name="{{ domain }} Intermediate Authority"
-  when: output['pki_int/'] is not defined
-  register: vault_csr_out
-
-- set_fact:
-    vault_csr: "{{ vault_csr_out.stdout | from_json }}"
-  when: output['pki_int/'] is not defined
-
-- name: Sign Intermediate CA cert with Root CA
-  shell: VAULT_ADDR=http://127.0.0.1:8200 vault write -format=json pki/root/sign-intermediate csr="{{vault_csr.data.csr}}" format=pem_bundle ttl="43800h"
-  register: vault_int_cert
-  when: output['pki_int/'] is not defined
-
-- set_fact:
-    vault_cert: "{{ vault_int_cert.stdout | from_json }}"
-  when: output['pki_int/'] is not defined
-
-- name: Import signed certificate into Intermediate CA
-  shell: VAULT_ADDR=http://127.0.0.1:8200 vault write pki_int/intermediate/set-signed certificate="{{vault_cert.data.certificate}}"
-  when: output['pki_int/'] is not defined
-
-- name: Create policy for {{domain}} to allow certificate issuance
-  shell: VAULT_ADDR=http://127.0.0.1:8200 vault write pki_int/roles/{{ domain | regex_replace('\\.', '-') }} allowed_domains={{domain}} allow_subdomains=true max_ttl=72h
-  when: output['pki_int/'] is not defined
-
-- name: De-authenticate with Vault
-  file:
-    path: ~/.vault-token
-    state: absent
-
-- name: Ensure Root CA certificate is trusted system-wide
-  copy:
-    src: /etc/vault/CA_cert.crt
-    dest: /usr/local/share/ca-certificates/CA_cert.crt
-  register: trust_store
-
-- name: Refresh CA trust store
-  command: update-ca-certificates --fresh
-  when: trust_store.changed
-
+- name: Ensure Certificate Authority exists
+  import_tasks: ca.yml
