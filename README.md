@@ -145,7 +145,9 @@ $ sudo vim /srv/elderberrypi/env.yml
 
 To add or remove roles, modify the ansible playbook file.  Note that roles have dependencies
 so if you remove a role that is depended upon by anothe role it will remain installed
-anyway.
+anyway.  Also note that removing a role just stops enforcement of its configuration.  Related
+roles may update accordingly (ie removing the active directory role will cause the ntp role
+to remove the mssntp configuration) but the software and its own configuration will remain.
 
 ```shell
 $ sudo vim /srv/elderberrypi/playbook.yml
