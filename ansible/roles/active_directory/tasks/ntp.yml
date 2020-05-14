@@ -30,6 +30,6 @@
 - name: Ensure NTP does not restrict MS SNTP
   replace:
     path: /etc/ntp.conf
-    regexp: '^(restrict -\d.+)$'
+    regexp: '^(restrict -\d.+?)( mssntp)?$'
     replace: '\1 mssntp'
   notify: restart ntp

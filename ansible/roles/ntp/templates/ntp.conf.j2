@@ -1,6 +1,8 @@
 # /etc/ntp.conf, configuration for ntpd; see ntp.conf(5) for help
 
 driftfile /var/lib/ntp/ntp.drift
+{% if 'active_directory' in ansible_play_role_names %}ntpsigndsocket /var/lib/samba/ntp_signd/{% endif %}
+
 
 # Leap seconds definition provided by tzdata
 leapfile /usr/share/zoneinfo/leap-seconds.list
@@ -35,8 +37,10 @@ pool ntp.ubuntu.com
 # up blocking replies from your own upstream servers.
 
 # By default, exchange time with everybody, but don't allow configuration.
-restrict -4 default kod notrap nomodify nopeer noquery limited
-restrict -6 default kod notrap nomodify nopeer noquery limited
+restrict -4 default kod notrap nomodify nopeer noquery limited{% if 'active_directory' in ansible_play_role_names %} mssntp{% endif %}
+
+restrict -6 default kod notrap nomodify nopeer noquery limited{% if 'active_directory' in ansible_play_role_names %} mssntp{% endif %}
+
 
 # Local users may interrogate the ntp server more closely.
 restrict 127.0.0.1
