@@ -22,9 +22,9 @@ system hardening and security controls on affordable hardware.  Select the roles
 you want to use and feel confident they are configured securely, by default.
 
 Have assurance that the secure state of the system is kept over time.  ElderberryPi
-uses Ansible scripts to apply its configuration with *idempotence.*  That means that
-the system remains unchanged *unless* its configuration has deviated from the acceptable
-state.  Because the configuration is continously reapplied every 30 minutes, this
+uses Ansible scripts to apply its configuration with *idempotence,*  so the
+system remains unchanged *unless* its configuration has deviated from the acceptable
+state.  Because the configuration is continuously reapplied every 30 minutes, this
 makes ElderberryPi *self-healing.*
 
 ## Supported Roles
