@@ -1,28 +1,15 @@
 ---
 
-- name: Stop and disable samba service
+- name: Stop and disable all samba services
   service:
-    name: smbd
+    name: "{{item}}"
     enabled: no
     state: stopped
-
-- name: Stop and disable netbios service
-  service:
-    name: nmbd
-    enabled: no
-    state: stopped
-
-- name: Stop and disable winbind service
-  service:
-    name: winbind
-    enabled: no
-    state: stopped
-
-- name: Stop and disable active directory service
-  service:
-    name: samba-ad-dc
-    enabled: no
-    state: stopped
+  with_items:
+    - smbd
+    - nmbd
+    - winbind
+    - samba-ad-dc
 
 - name: Remove existing configuration
   file:
