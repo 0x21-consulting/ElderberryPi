@@ -1,0 +1,46 @@
+---
+
+- set_fact:
+    reverse_zone: "{{network | ipaddr('revdns') | regex_replace('^\\d+\\.(.+)\\.$', '\\1')}}"
+
+- name: Check if reverse lookup zone exists
+  command:
+    stdin: "{{adminpassword}}" # TODO: https://github.com/ansible/ansible/issues/69442
+    argv:
+      - samba-tool
+      - dns
+      - zonelist
+      - "{{hostname}}"
+      - "-P"
+  register: reverse_zone_output
+  changed_when: false
+
+- set_fact:
+    zone_exists: "{{ reverse_zone_output.stdout | regex_search(reverse_zone) }}"
+
+- name: Ensure existence of reverse lookup zone
+  command:
+    stdin: "{{adminpassword}}" # TODO: https://github.com/ansible/ansible/issues/69442
+    argv:
+      - samba-tool
+      - dns
+      - zonecreate
+      - "{{hostname}}"
+      - "{{reverse_zone}}"
+      - "-P"
+  when: not zone_exists
+
+- name: Add server to reverse lookup zone
+  command:
+    stdin: "{{adminpassword}}" # TODO: https://github.com/ansible/ansible/issues/69442
+    argv:
+      - samba-tool
+      - dns
+      - add
+      - "{{hostname}}"
+      - "{{reverse_zone}}"
+      - "{{ip_address | ipaddr('revdns') | regex_replace('^(\\d+)\\..+\\.$', '\\1')}}"
+      - PTR
+      - "{{hostname}}.{{domain}}"
+      - "-P"
+  when: not zone_exists

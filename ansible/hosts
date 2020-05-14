@@ -1,0 +1,2 @@
+[elderberrypi]
+localhost ansible_connection=local

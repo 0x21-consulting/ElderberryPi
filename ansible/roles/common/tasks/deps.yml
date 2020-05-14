@@ -1,0 +1,21 @@
+---
+
+- name: Update ubuntu
+  apt:
+    update_cache: yes
+    upgrade: "yes"
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: Clean up old packages and files to save space
+  apt:
+    autoclean: yes
+    autoremove: yes
+
+- name: Install ansible plugins and other dependencies
+  apt:
+    name:
+      - python-netaddr
+      - python-jmespath
+      - unzip
+    state: present

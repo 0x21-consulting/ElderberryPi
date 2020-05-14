@@ -1,0 +1,30 @@
+---
+
+- name: Stop and disable all samba services
+  service:
+    name: "{{item}}"
+    enabled: no
+    state: stopped
+  with_items:
+    - smbd
+    - nmbd
+    - winbind
+    - samba-ad-dc
+
+- name: Remove existing configuration
+  file:
+    path: /etc/samba/smb.conf
+    state: absent
+
+- name: Provision Active Directory
+  command:
+    argv:
+      - samba-tool
+      - domain
+      - provision
+      - --server-role=dc
+      - --use-rfc2307
+      - --dns-backend=BIND9_DLZ
+      - --realm={{domain}}
+      - --domain={{netbios_domain}}
+      - --adminpass={{adminpassword}}

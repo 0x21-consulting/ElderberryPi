@@ -214,4 +214,4 @@ fi
 
 # Bring up Build Environment
 echo -e "\nCreating build environment...\n"
-cd vagrant && vagrant up --provision
+cd vagrant && vagrant up --no-provision && vagrant provision

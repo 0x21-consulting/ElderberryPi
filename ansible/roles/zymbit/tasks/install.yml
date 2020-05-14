@@ -1,0 +1,81 @@
+---
+
+- name: Ensure Zymbit GPG Key is trusted
+  apt_key:
+    url: https://zk-sw-repo.s3.amazonaws.com/apt-zymkey-pubkey.gpg
+    state: present
+
+- name: Ensure Zymbit apt repo is in sources list
+  lineinfile:
+    path: /etc/apt/sources.list.d/zymbit.list
+    state: present
+    line: deb https://zk-sw-repo.s3.amazonaws.com/apt-repo-bionic/ bionic main
+    create: yes
+
+- name: Ensure Zymbit dependencies are installed
+  apt:
+    update_cache: yes
+    name:
+    - libboost-thread-dev
+    - lsb-release
+    - libjansson4
+    - libyaml-dev
+    - libssl-dev
+    - libcurl4-openssl-dev
+    - python-setuptools
+    - python-dev
+    - python-pip
+    - python3-pip
+    - i2c-tools
+    state: present
+  notify: restart zkifc
+
+- name: Ensure Zymbit python2 dependencies are installed
+  pip:
+    executable: pip
+    name:
+    - inotify
+    - pycurl
+    - progress
+    - python-gnupg
+  notify: restart zkifc
+
+- name: Ensure Zymbit python3 dependencies are installed
+  pip:
+    executable: pip3
+    name:
+    - inotify
+    - pycurl
+    - progress
+    - python-gnupg
+  notify: restart zkifc
+
+- name: Ensure Zymbit packages are installed
+  apt:
+    name:
+    - libzk
+    - libzymkeyssl
+    - zkbootrtc
+    - zkifc
+    - zkapputilslib
+    - zksaapps
+    - zkpkcs11
+    - cryptsetup
+    state: present
+  notify: restart zkifc
+
+- name: Ensure Zymbit python2 packages are installed
+  pip:
+    executable: pip
+    name:
+    - zku
+    - zk_luks
+  notify: restart zkifc
+
+- name: Ensure Zymbit python3 packages are installed
+  pip:
+    executable: pip3
+    name:
+    - zku
+    - zk_luks
+  notify: restart zkifc

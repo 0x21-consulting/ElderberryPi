@@ -1,0 +1,24 @@
+---
+
+- name: Ensure firewall configuration exists
+  copy:
+    src: ad.firewall.j2
+    dest: /etc/ufw/applications.d/ad
+
+- name: Allow Active Directory traffic
+  ufw:
+    name: active_directory
+    rule: allow
+
+# Kerberos: 88
+# Kerberos Change/Set Password: 464
+# NetBIOS Name Service: 137
+# NetBIOS Datagram Service: 138
+# NetBIOS Session Service: 139
+# Server Message Block (SMB): 445/tcp
+# Lightweight Directory Access Protocol (LDAP): 389
+# Secure LDAP: 636
+# Microsoft Global Catalog: 3268
+# Secure Microsoft Global Catalog: 3269
+# Microsoft End Point Mapper (EPMAP): 135
+# Samba Remote Procedure Call (RPC): 49152, 49153, 49154

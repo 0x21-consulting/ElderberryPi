@@ -1,6 +1,6 @@
 {
   "variables": {
-    "ssh_key_src": "/home/vagrant/.ssh/ssh.pub",
+    "ssh_key_src": "/home/vagrant/.ssh/elderberrypi.key.pub",
     "image_home_dir": "/home/ubuntu"
   },
   "builders": [{
