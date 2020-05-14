@@ -1,0 +1,57 @@
+---
+
+- name: Ensure gpio group exists
+  group:
+    name: gpio
+    state: present
+
+- name: Ensure gpio group owns /sys/class/gpio
+  lineinfile:
+    path: /etc/rc.local
+    state: present
+    line: chown -R root:gpio /sys/class/gpio
+    create: yes
+
+- name: Ensure proper permissions of /sys/class/gpio
+  lineinfile:
+    path: /etc/rc.local
+    state: present
+    line: chmod -R ug+rw /sys/class/gpio
+    create: yes
+
+- name: Ensure udev rules exist for gpio
+  lineinfile:
+    path: /etc/udev/rules.d/80-gpio-noroot.rules
+    state: present
+    line: ACTION=="add", SUBSYSTEM=="gpio", PROGRAM="/bin/sh -c 'chown -R root:gpio /sys/${DEVPATH}; chmod -R g+w /sys/${DEVPATH}'"
+    create: yes
+
+- name: Insall zymbit software and dependencies
+  import_tasks: install.yml
+
+- name: Ensure create_zk_crypt_vol symlink exists
+  file:
+    state: link
+    src: /usr/local/lib/python3.6/dist-packages/zk_crypt_vol_utils/__init__.py
+    dest: /usr/local/bin/create_zk_crypt_vol
+  # If this symlink doesn't exist, this is first run. Restart to bind device to Pi
+  register: zymbit_first_run
+
+- name: Reboot host to bind Zymkey
+  shell: init 6
+  when: zymbit_first_run.changed
+
+- name: Ensure zk_prep_encr script exists
+  get_url:
+    url: https://s3.amazonaws.com/zk-sw-repo/zk_prep_encr
+    dest: /usr/local/bin/zk_prep_encr
+    mode: +x
+
+- name: Copy encryption and decryption cli tools
+  copy:
+    src: "{{ item }}"
+    dest: /usr/local/bin/
+    mode: "+x"
+  with_items:
+    - zkencrypt
+    - zkdecrypt

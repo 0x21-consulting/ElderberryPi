@@ -1,0 +1,35 @@
+---
+
+- name: Ensure NTP service can access ntp signd socket
+  file:
+    path: /var/lib/samba/ntp_signd
+    state: directory
+    group: ntp
+    mode: '750'
+  notify: restart ntp
+
+- name: Ensure NTP service is configured to use signd socket
+  lineinfile:
+    path: /etc/ntp.conf
+    line: 'ntpsigndsocket /var/lib/samba/ntp_signd/'
+    insertafter: '^driftfile'
+  notify: restart ntp
+
+- name: Ensure AppArmor allows NTP server to read signd socket
+  copy:
+    src: usr.sbin.ntpd.j2
+    dest: /etc/apparmor.d/local/usr.sbin.ntpd
+  register: apparmor_ntpd
+# To disable app armor:  sudo aa-disable /etc/apparmor.d/usr.sbin.ntpd
+# To refresh app armor:  sudo apparmor_parser -r /etc/apparmor.d/usr.sbin.ntpd
+
+- name: Apply AppArmor NTP policy
+  command: apparmor_parser -r /etc/apparmor.d/usr.sbin.ntpd
+  when: apparmor_ntpd is changed
+
+- name: Ensure NTP does not restrict MS SNTP
+  replace:
+    path: /etc/ntp.conf
+    regexp: '^(restrict -\d.+?)( mssntp)?$'
+    replace: '\1 mssntp'
+  notify: restart ntp

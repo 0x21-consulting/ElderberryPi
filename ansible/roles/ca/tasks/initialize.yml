@@ -1,0 +1,20 @@
+---
+  
+- name: Initialize vault
+  shell: VAULT_ADDR=http://127.0.0.1:8200 vault operator init -key-shares=1 -key-threshold=1 -format=json
+  register: vault_init_results
+
+- set_fact:
+    output: "{{ vault_init_results.stdout | from_json }}"
+
+- name: Encrypt and store unseal key
+  command:
+    cmd: zkencrypt -o /etc/vault/unseal.key
+    stdin: "{{ output.unseal_keys_b64 | first }}"
+    creates: /etc/vault/unseal.key
+
+- name: Encrypt and store root token
+  command:
+    cmd: zkencrypt -o /etc/vault/root.token
+    stdin: "{{ output.root_token }}"
+    creates: /etc/vault/root.token

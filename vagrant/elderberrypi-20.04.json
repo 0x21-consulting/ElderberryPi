@@ -1,0 +1,124 @@
+{
+  "variables": {
+    "ssh_key_src": "/home/vagrant/.ssh/ssh.pub",
+    "image_home_dir": "/home/ubuntu"
+  },
+  "builders": [{
+    "type": "arm",
+    "file_urls" : ["http://cdimage.ubuntu.com/releases/20.04/release/ubuntu-20.04-preinstalled-server-arm64+raspi.img.xz"],
+    "file_checksum_url": "http://cdimage.ubuntu.com/releases/20.04/release/SHA256SUMS",
+    "file_checksum_type": "sha256",
+    "file_target_extension": "xz",
+    "file_unarchive_cmd": ["unxz", "$ARCHIVE_PATH"],
+    "image_build_method": "reuse",
+    "image_path": "elderberrypi.img",
+    "image_size": "2G",
+    "image_type": "dos",
+    "image_partitions": [
+      {
+        "name": "boot",
+        "type": "c",
+        "start_sector": "8192",
+        "filesystem": "vfat",
+        "size": "256M",
+        "mountpoint": "/boot"
+      },
+      {
+        "name": "root",
+        "type": "83",
+        "start_sector": "532480",
+        "filesystem": "ext4",
+        "size": "0",
+        "mountpoint": "/"
+      }
+    ],
+    "additional_chroot_mounts": [
+      {
+        "mount_type": "bind",
+        "source_path": "/run/systemd",
+        "destination_path": "/run/systemd"
+      }
+    ],
+    "image_chroot_env": [
+      "PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin",
+      "DEBIAN_FRONTEND=noninteractive"
+    ],
+    "qemu_binary_source_path": "/usr/bin/qemu-aarch64-static",
+    "qemu_binary_destination_path": "/usr/bin/qemu-aarch64-static"
+  }],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "#echo [Zymbit] Preparing dependencies...",
+
+        "#echo [Zymbit] Setting permissions...",
+        "#groupadd gpio",
+        "#touch /etc/rc.local",
+        "#echo \"chown -R root:gpio /sys/class/gpio\" >> /etc/rc.local",
+        "#echo \"chmod -R ug+rw /sys/class/gpio\" >> /etc/rc.local",
+        "#echo \"ACTION==\\\"add\\\", SUBSYSTEM==\\\"gpio\\\", PROGRAM=\\\"/bin/sh -c 'chown -R root:gpio /sys/${DEVPATH}; chmod -R g+w /sys/${DEVPATH}'\\\"\" >> /etc/udev/rules.d/80-gpio-noroot.rules",
+
+        "#echo [Zymbit] Installing prerequisites...",
+        "#export DEBIAN_FRONTEND=noninteractive",
+        "#sudo apt-get install -y libboost-thread-dev lsb-release libjansson4",
+        "#sudo apt-get install -y apt-transport-https libyaml-dev libssl-dev libcurl4-openssl-dev python-setuptools python-dev python3-pip i2c-tools",
+        "#pip3 install inotify",
+        "#pip3 install pycurl",
+        "#pip3 install progress",
+        "#pip3 install python-gnupg",
+
+        "#echo [Zymbit] Import Zymbit GPG key and add apt repo to sources list...",
+        "#curl -L 'https://zk-sw-repo.s3.amazonaws.com/apt-zymkey-pubkey.gpg' | apt-key add -",
+        "#echo 'deb https://zk-sw-repo.s3.amazonaws.com/apt-repo-focal/ focal main' > /etc/apt/sources.list.d/zymbit.list",
+        "#sudo apt-get update -y",
+
+        "#echo [Zymbit] Install Zymbit packages...",
+        "#sudo apt-get install -y libzk libzymkeyssl zkbootrtc zkifc zkapputilslib zksaapps zkpkcs11 cryptsetup",
+        "#pip3 install -U zku",
+        "#pip3 install -U zk_luks",
+        "#ln -s /usr/local/lib/python2.7/dist-packages/zk_luks/__init__.py /usr/local/bin/create_zk_crypt_vol",
+        "#curl -G https://s3.amazonaws.com/zk-sw-repo/zk_prep_encr > /usr/local/bin/zk_prep_encr",
+        "#chmod +x /usr/local/bin/zk_prep_encr"
+      ],
+      "environment_vars": ["DEBIAN_FRONTEND=noninteractive"]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "echo Setting up SSH auth...",
+        "mkdir -p {{user `image_home_dir`}}/.ssh",
+        "sed '/PasswordAuthentication/d' -i /etc/ssh/sshd_config",
+        "sed '/ChallengeResponseAuthentication/d' -i /etc/ssh/sshd_config",
+        "sed '/UsePAM/d' -i /etc/ssh/sshd_config",
+        "sed '/PermitRootLogin/d' -i /etc/ssh/sshd_config",
+        "echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config",
+        "echo 'ChallengeResponseAuthentication no' >> /etc/ssh/sshd_config",
+        "echo 'UsePAM no' >> /etc/ssh/sshd_config",
+        "echo 'PermitRootLogin no' >> /etc/ssh/sshd_config",
+
+        "echo Correcting permissions...",
+        "chown -R 1000:1000 {{user `image_home_dir`}}",
+
+        "echo Copy skeleton files...",
+        "cp -r /etc/skel/. {{user `image_home_dir`}}/",
+
+        "echo Installing Ansible...",
+        "export DEBIAN_FRONTEND=noninteractive",
+        "sudo apt-get update &>/dev/null",
+        "sudo apt-get install -y ansible &>/dev/null"
+      ],
+      "environment_vars": ["DEBIAN_FRONTEND=noninteractive"]
+    },
+    {
+      "type": "file",
+      "source": "{{user `ssh_key_src`}}",
+      "destination": "{{user `image_home_dir`}}/.ssh/authorized_keys"
+    },
+    {
+      "type": "file",
+      "source": "/ansible",
+      "destination": "{{user `image_home_dir`}}"
+    }
+  ]
+}

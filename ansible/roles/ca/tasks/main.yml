@@ -1,0 +1,62 @@
+---
+
+- name: Check to see if vault exists
+  stat:
+    path: /usr/bin/vault
+  register: vault
+  changed_when: false
+
+- name: Install vault
+  import_tasks: install.yml
+  when: not vault.stat.exists
+
+- name: Ensure systemd service is installed
+  copy:
+    src: vault.service.j2
+    dest: /etc/systemd/system/vault.service
+
+- name: Ensure vault configuration directory exists
+  file:
+    path: /etc/vault
+    state: directory
+    mode: "-go"
+
+- name: Ensure vault configuration exists
+  copy:
+    src: config.hcl.j2
+    dest: /etc/vault/config.hcl
+
+- name: Ensure systemd service is enabled and started
+  service:
+    name: vault
+    enabled: yes
+    state: started
+
+# Vault Status Exit Codes
+# 0 - unsealed
+# 1 - error
+# 2 - sealed
+
+- name: Check vault status
+  shell: VAULT_ADDR=http://127.0.0.1:8200 vault status -format=json
+  register: vault_status
+  failed_when: vault_status.rc == 1
+  changed_when: false
+
+- set_fact:
+    output: "{{ vault_status.stdout | from_json }}"
+
+- set_fact:
+    vault_initialized: "{{ output.initialized }}"
+    vault_unsealed: "{{ vault_status.rc == 0 }}"
+
+- name: Initialize vault
+  import_tasks: initialize.yml
+  when: not vault_initialized
+
+- name: Unsealed vault
+  import_tasks: unseal.yml
+  when: not vault_unsealed
+
+- name: Ensure Certificate Authority exists
+  import_tasks: ca.yml

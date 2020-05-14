@@ -1,0 +1,6 @@
+.vagrant/
+packer_cache/
+packer-builder-arm
+elderberrypi.img
+elderberrypi.key
+elderberrypi.key.pub

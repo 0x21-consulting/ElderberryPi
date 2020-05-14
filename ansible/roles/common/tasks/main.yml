@@ -1,69 +1,15 @@
 ---
 
-- name: Determine if DNS is running locally
-  stat:
-    path: /etc/systemd/system/multi-user.target.wants/bind9.service
-  register: local_dns
+- name: Configure IP networking
+  import_tasks: network.yml
 
-- name: Configure network adapter
-  template: src=01-netcfg.yaml.j2 dest=/etc/netplan/01-netcfg.yaml
-  register: network_setting
-
-- name: Apply network configuration
-  command: netplan apply
-  when: network_setting is changed
-
-- name: Configure hostname
-  template: src=hostname.j2 dest=/etc/hostname
-  register: hostname_setting
-
-- name: Run ubuntu hostname config command
-  command: hostnamectl set-hostname {{hostname}}
-  when: hostname_setting is changed
-
-- name: Update ubuntu
-  apt:
-    update_cache: yes
-    upgrade: "yes"
-  environment:
-    DEBIAN_FRONTEND: noninteractive
-
-- name: Clean up old packages and files to save space
-  apt:
-    autoclean: yes
-    autoremove: yes
-
-- name: Install ansible plugins
-  apt:
-    name: python-netaddr
-    state: present
+- name: Install dependencies
+  import_tasks: deps.yml
 
 # We have to wait till now to update fqdn because ansible needs
 # the python-netaddr plugin
 - name: Configure fqdn
   template: src=hosts.j2 dest=/etc/hosts
 
-- name: Ensure firewall is enabled with a default deny policy
-  ufw:
-    state: enabled
-    policy: deny
-    direction: incoming
-    logging: 'on'
-
-- name: Firewall - Allow SSH
-  ufw:
-    rule: allow
-    name: OpenSSH
-    log: yes
-
-# ufw supports connection rate limiting, which is useful for protecting
-# against brute-force login attacks. ufw will deny connections if an IP
-# address has attempted to initiate 6 or more connections in the last
-# 30 seconds. See  http://www.debian-administration.org/articles/187
-# for details.
-- name: Firewall - Rate limit ssh connections
-  ufw:
-    rule: limit
-    port: ssh
-    proto: tcp
-
+- name: Configure firewall
+  import_tasks: firewall.yml

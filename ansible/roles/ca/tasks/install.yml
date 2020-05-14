@@ -1,0 +1,32 @@
+---
+
+- name: Ensure Hashicorp Public Key is imported into GPG keybox
+  command: gpg --keyserver keys.openpgp.org --recv-keys 51852D87348FFC4C
+
+- name: Download vault checksum signature
+  get_url:
+    url: https://releases.hashicorp.com/vault/{{VAULT_VERSION}}/vault_{{VAULT_VERSION}}_SHA256SUMS.sig
+    dest: ./vault_{{VAULT_VERSION}}_SHA256SUMS.sig
+
+- name: Download vault checksum
+  get_url:
+    url: https://releases.hashicorp.com/vault/{{VAULT_VERSION}}/vault_{{VAULT_VERSION}}_SHA256SUMS
+    dest: ./vault_{{VAULT_VERSION}}_SHA256SUMS
+
+- name: Verify checksum file digital signature
+  command: gpg --verify vault_{{VAULT_VERSION}}_SHA256SUMS.sig vault_{{VAULT_VERSION}}_SHA256SUMS
+
+- name: Download vault
+  get_url:
+    url: https://releases.hashicorp.com/vault/{{VAULT_VERSION}}/vault_{{VAULT_VERSION}}_linux_arm64.zip
+    dest: ./vault_{{VAULT_VERSION}}_linux_arm64.zip
+    # TODO: Find some way to use the downloaded, verified SHASUMS file...
+    #checksum: sha256:{{lookup('file', './vault_1.4.1_SHA256SUMS')}}
+    checksum: sha256:https://releases.hashicorp.com/vault/{{VAULT_VERSION}}/vault_{{VAULT_VERSION}}_SHA256SUMS
+
+- name: Install vault
+  unarchive:
+    src: ./vault_{{VAULT_VERSION}}_linux_arm64.zip
+    dest: /usr/bin
+    remote_src: yes
+    mode: u+x,g+x,o+x

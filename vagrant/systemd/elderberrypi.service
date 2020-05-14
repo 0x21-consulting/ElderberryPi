@@ -1,0 +1,12 @@
+[Unit]
+Description=ElderberryPi service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+User=elderberrypi
+ExecStart=/usr/bin/env /srv/elderberrypi/elderberrypi.sh
+
+[Install]
+WantedBy=multi-user.target

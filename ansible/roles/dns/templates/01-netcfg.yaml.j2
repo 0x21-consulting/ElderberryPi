@@ -8,9 +8,10 @@ network:
   ethernets:
     eth0:
       dhcp4: no
+      dhcp6: no
+      accept-ra: no
       addresses: [{{ip_address}}]
       gateway4: {{gateway}}
       nameservers:
-        addresses: [127.0.0.1]
         search: [{{domain}}]
-
+        addresses: [127.0.0.1]

@@ -1,0 +1,41 @@
+---
+
+- name: Ensure AppArmor allows DNS server to read Samba files
+  copy:
+    src: usr.sbin.named.j2
+    dest: /etc/apparmor.d/local/usr.sbin.named
+  register: apparmor
+# To disable app armor:  sudo aa-disable /etc/apparmor.d/usr.sbin.named
+# To refresh app armor:  sudo apparmor_parser -r /etc/apparmor.d/usr.sbin.named
+
+- name: Apply AppArmor DNS policy
+  command: apparmor_parser -r /etc/apparmor.d/usr.sbin.named
+  when: apparmor is changed
+
+- name: Ensure DNS dynamic updates are enabled
+  lineinfile:
+    name: /etc/bind/named.conf.options
+    line: '        tkey-gssapi-keytab "/var/lib/samba/private/dns.keytab";'
+    state: present
+    insertbefore: '^};'
+  notify: restart bind9
+
+- name: Ensure DNS server can read samba dynamic updates key tab
+  file:
+    name: /var/lib/samba/private/dns.keytab
+    group: bind
+    mode: '640'
+  notify: restart bind9
+
+- name: Ensure DNS server is configured to use Samba DNS zones
+  lineinfile:
+    name: /etc/bind/named.conf.local
+    line: 'include "/var/lib/samba/private/named.conf";'
+    state: present
+  notify: restart bind9
+
+- name: Ensure DNS server can read Samba zones
+  file:
+    name: /var/lib/samba/private/named.conf
+    group: bind
+  notify: restart bind9
