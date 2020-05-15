@@ -1,0 +1,33 @@
+---
+
+- name: Ensure ISC DHCP is installed
+  apt:
+    name: isc-dhcp-server
+    state: present
+
+- name: Ensure proper DHCP configuration
+  template:
+    src: dhcpd.conf.j2
+    dest: /etc/dhcp/dhcpd.conf
+
+- name: Ensure manufacturer data is available
+  get_url:
+    url: http://standards-oui.ieee.org/oui.txt
+    dest: /usr/local/etc/oui.txt
+  failed_when: false # not important, just a nicety
+
+- name: Ensure DHCP service is enabled and running
+  service:
+    name: isc-dhcp-server
+    enabled: yes
+    state: started
+
+- name: Ensure firewall configuration exists
+  copy:
+    src: dhcp.firewall.j2
+    dest: /etc/ufw/applications.d/dhcp
+
+- name: Allow DHCP traffic
+  ufw:
+    name: dhcp
+    rule: allow
