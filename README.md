@@ -121,7 +121,7 @@ Note that the default user account is `ubuntu`.
 To monitor ansible progress:
 
 ```shell
-$ sudo tail -n 50 -f /srv/elderberrypi/elderberrypi.log
+$ sudo tail -n 50 -f /srv/elderberrypi/log
 ```
 
 The ansible scripts will run automatically on every boot and every 30 minutes.
