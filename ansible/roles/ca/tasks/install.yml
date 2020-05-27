@@ -1,5 +1,10 @@
 ---
 
+- name: Restart DNS Server to ensure GPG key can be imported
+  service:
+    name: bind9
+    state: restarted
+
 - name: Ensure Hashicorp Public Key is imported into GPG keybox
   command: gpg --keyserver keys.openpgp.org --recv-keys 51852D87348FFC4C
 
