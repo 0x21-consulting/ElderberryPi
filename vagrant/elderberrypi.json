@@ -60,6 +60,9 @@
     {
       "type": "shell",
       "inline": [
+        "echo Disabling cloud-init netplan configuration...",
+        "echo 'network: {config: disabled}' > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg",
+
         "echo Creating ElderberryPi user account and systemd service...",
         "useradd -r -s /bin/false elderberrypi",
         "echo 'elderberrypi ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
@@ -67,7 +70,7 @@
         "chmod -R go= /srv/elderberrypi",
         "ln -s /etc/systemd/system/elderberrypi.timer /etc/systemd/system/timers.target.wants/elderberrypi.timer",
 
-        "echo Setting up SSH auth...",
+        "echo Configuring SSH authentication...",
         "mkdir -p {{user `image_home_dir`}}/.ssh",
         "sed '/PasswordAuthentication/d' -i /etc/ssh/sshd_config",
         "sed '/ChallengeResponseAuthentication/d' -i /etc/ssh/sshd_config",
@@ -77,6 +80,7 @@
         "echo 'ChallengeResponseAuthentication no' >> /etc/ssh/sshd_config",
         "echo 'UsePAM no' >> /etc/ssh/sshd_config",
         "echo 'PermitRootLogin no' >> /etc/ssh/sshd_config",
+        "sed -i 's/ssh_pwauth: true/ssh_pwauth: false/' /boot/user-data",
 
         "echo Correcting permissions...",
         "chown -R 1000:1000 {{user `image_home_dir`}}",
